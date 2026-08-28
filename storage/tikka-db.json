@@ -1,0 +1,151 @@
+{
+  "customers": [],
+  "requests": [],
+  "reviews": [],
+  "providers": [
+    {
+      "id": "provider-sunil",
+      "name": "Sunil Perera",
+      "phone": "+94770000001",
+      "email": "sunil.provider@example.com",
+      "passwordHash": null,
+      "profileImage": "public/brand/tikka-logo.jpg",
+      "profilePhoto": "public/brand/tikka-logo.jpg",
+      "skills": [
+        "Repairs",
+        "Handyman",
+        "Furniture assembly"
+      ],
+      "services": [
+        "Repairs",
+        "Handyman"
+      ],
+      "serviceArea": "Colombo and suburbs",
+      "description": "Experienced repair and handyman support for everyday jobs.",
+      "experienceYears": 8,
+      "qualifications": "General maintenance training",
+      "state": "APPROVED",
+      "verificationStatus": "Approved",
+      "rating": 4.7,
+      "completedJobs": 0,
+      "createdAt": "2026-08-26T14:30:30.268Z"
+    },
+    {
+      "id": "provider-nadeesha",
+      "name": "Nadeesha Fernando",
+      "phone": "+94770000002",
+      "email": "nadeesha.provider@example.com",
+      "passwordHash": null,
+      "profileImage": "public/brand/tikka-logo.jpg",
+      "profilePhoto": "public/brand/tikka-logo.jpg",
+      "skills": [
+        "Cleaning",
+        "Maintenance"
+      ],
+      "services": [
+        "Cleaning"
+      ],
+      "serviceArea": "Greater Colombo",
+      "description": "Cleaning and maintenance provider for homes and offices.",
+      "experienceYears": 5,
+      "qualifications": "Cleaning operations experience",
+      "state": "APPROVED",
+      "verificationStatus": "Approved",
+      "rating": 4.8,
+      "completedJobs": 0,
+      "createdAt": "2026-08-26T14:30:30.268Z"
+    }
+  ],
+  "admins": [
+    {
+      "id": "admin_013fbde84d728328",
+      "name": "TIKKA Admin",
+      "email": "admin@tikka.lk",
+      "passwordHash": "edc64551b48989018cf5bfebd8fc9746:5e6b77caac1e3cde7d5236d78a85c133364110f81b1ae2f8e10fe82d70da972b",
+      "role": "admin",
+      "createdAt": "2026-08-26T14:30:30.291Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": "category_160c9cfd84fa7f9f",
+      "name": "Cleaning",
+      "code": "CL",
+      "icon": "CL",
+      "description": "Homes, offices, and short-notice cleanup support.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_0f2c17c69141a743",
+      "name": "Plumbing",
+      "code": "PL",
+      "icon": "PL",
+      "description": "Leaks, fittings, fixtures, and everyday water issues.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_ede0630195978936",
+      "name": "Electrical",
+      "code": "EL",
+      "icon": "EL",
+      "description": "Small repairs, installations, and electrical maintenance.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_ea38fe74d37ca5ce",
+      "name": "Repairs",
+      "code": "RP",
+      "icon": "RP",
+      "description": "Fixes around the home or workplace.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_5830ed3c38757b02",
+      "name": "Painting",
+      "code": "PT",
+      "icon": "PT",
+      "description": "Fresh coats, touch-ups, and tidy finish work.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_247ba9c13145102c",
+      "name": "Handyman",
+      "code": "HM",
+      "icon": "HM",
+      "description": "Odd jobs, mounting, assembly, and practical help.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_4f08d930b120b30a",
+      "name": "Moving",
+      "code": "MV",
+      "icon": "MV",
+      "description": "Support for shifting items and setting up spaces.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    },
+    {
+      "id": "category_67cce6342f94c07b",
+      "name": "Gardening",
+      "code": "GD",
+      "icon": "GD",
+      "description": "Garden care, clearing, trimming, and maintenance.",
+      "enabled": true,
+      "createdAt": "2026-08-26T14:30:30.270Z",
+      "updatedAt": "2026-08-26T14:30:30.270Z"
+    }
+  ]
+}

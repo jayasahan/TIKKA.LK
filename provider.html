@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Register and manage service provider jobs with TIKKA.">
+    <title>TIKKA Provider Dashboard</title>
+    <link rel="preload" href="public/brand/tikka-logo.jpg" as="image">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-header>
+      <nav class="nav container" aria-label="Primary navigation">
+        <a class="brand" href="index.html#home" aria-label="TIKKA home">
+          <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
+        </a>
+
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" data-nav-toggle>
+          <span class="nav-toggle__line"></span>
+          <span class="nav-toggle__line"></span>
+          <span class="nav-toggle__line"></span>
+          <span class="sr-only">Open menu</span>
+        </button>
+
+        <div class="nav-menu" id="primary-menu" data-nav-menu>
+          <a href="index.html#home">Home</a>
+          <a href="#register">Register</a>
+          <a href="#dashboard">Dashboard</a>
+          <a href="app.html">Customer Requests</a>
+        </div>
+
+        <button class="button button--secondary nav-cta" type="button" data-provider-logout hidden>Log out</button>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="app-hero section">
+        <div class="container app-hero__inner">
+          <div>
+            <p class="eyebrow">Service Providers</p>
+            <h1>Manage assigned TIKKA jobs.</h1>
+            <p>
+              Create your profile, submit verification, wait for approval, then accept,
+              start, and complete assigned customer jobs.
+            </p>
+          </div>
+          <div class="status-panel glass-panel" data-provider-session>
+            <p class="eyebrow">Provider Status</p>
+            <h2 data-provider-session-title>Register or log in</h2>
+            <p data-provider-session-copy>Providers are reviewed before they can receive assigned jobs.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight" id="register" aria-labelledby="provider-auth-title">
+        <div class="container app-grid">
+          <section class="form-card" aria-labelledby="provider-auth-title">
+            <p class="eyebrow">Provider Access</p>
+            <h2 id="provider-auth-title">Register or log in</h2>
+            <form data-provider-auth-form novalidate>
+              <div class="form-grid">
+                <label>
+                  <span>Full name <em>required for registration</em></span>
+                  <input name="name" autocomplete="name">
+                </label>
+                <label>
+                  <span>Phone <em>required for registration</em></span>
+                  <input name="phone" autocomplete="tel">
+                </label>
+                <label>
+                  <span>Email <em>required</em></span>
+                  <input name="email" type="email" autocomplete="email" required>
+                </label>
+                <label>
+                  <span>Password <em>required</em></span>
+                  <input name="password" type="password" autocomplete="current-password" required minlength="8">
+                </label>
+                <label>
+                  <span>Profile photo <em>optional</em></span>
+                  <input name="profilePhotoFile" type="file" accept="image/*">
+                </label>
+                <label>
+                  <span>Years of experience <em>required</em></span>
+                  <input name="experienceYears" type="number" min="0" max="80">
+                </label>
+                <label class="form-span">
+                  <span>Skills <em>required</em></span>
+                  <input name="skills" placeholder="Repairs, painting, furniture assembly">
+                </label>
+                <fieldset class="form-span checkbox-field" data-provider-services>
+                  <legend>Services <em>required</em></legend>
+                </fieldset>
+                <label class="form-span">
+                  <span>Service area <em>required</em></span>
+                  <input name="serviceArea" placeholder="Colombo and suburbs">
+                </label>
+                <label class="form-span">
+                  <span>Professional description <em>required</em></span>
+                  <textarea name="description" rows="4" maxlength="800"></textarea>
+                </label>
+                <label class="form-span">
+                  <span>Qualification/certification information <em>required</em></span>
+                  <textarea name="qualifications" rows="3" maxlength="800"></textarea>
+                </label>
+              </div>
+              <div class="form-actions">
+                <button class="button button--primary" type="submit" name="mode" value="register">Create provider profile</button>
+                <button class="button button--secondary" type="submit" name="mode" value="login">Log in</button>
+              </div>
+              <div class="form-message" data-provider-auth-message role="status"></div>
+            </form>
+          </section>
+
+          <section class="form-card" aria-labelledby="profile-title">
+            <p class="eyebrow">Profile</p>
+            <h2 id="profile-title">Provider summary</h2>
+            <div data-provider-profile>
+              <p class="muted">Log in to see your profile summary.</p>
+            </div>
+            <div class="form-actions">
+              <button class="button button--primary" type="button" data-submit-verification hidden>Submit verification</button>
+            </div>
+            <div class="form-message" data-provider-profile-message role="status"></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="section request-flow" id="dashboard" aria-labelledby="provider-dashboard-title">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Dashboard</p>
+            <h2 id="provider-dashboard-title">Your assigned work.</h2>
+            <p class="muted">Only jobs assigned to your provider account appear here.</p>
+          </div>
+          <div class="provider-job-grid" data-provider-jobs>
+            <p class="muted">Log in to view jobs.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <a class="brand footer-brand" href="index.html#home" aria-label="TIKKA home">
+            <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
+          </a>
+          <p>TIKKA connects customers with skilled people for repairs, cleaning, maintenance, and everyday jobs.</p>
+        </div>
+        <div>
+          <h2>Provider</h2>
+          <ul>
+            <li><a href="#register">Register</a></li>
+            <li><a href="#dashboard">Dashboard</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Contact</h2>
+          <p>Contact details coming soon.</p>
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <p>&copy; 2026 TIKKA. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+    <script src="provider.js" defer></script>
+  </body>
+</html>

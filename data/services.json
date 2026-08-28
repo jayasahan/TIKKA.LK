@@ -1,0 +1,50 @@
+[
+  {
+    "name": "Cleaning",
+    "code": "CL",
+    "icon": "CL",
+    "description": "Homes, offices, and short-notice cleanup support."
+  },
+  {
+    "name": "Plumbing",
+    "code": "PL",
+    "icon": "PL",
+    "description": "Leaks, fittings, fixtures, and everyday water issues."
+  },
+  {
+    "name": "Electrical",
+    "code": "EL",
+    "icon": "EL",
+    "description": "Small repairs, installations, and electrical maintenance."
+  },
+  {
+    "name": "Repairs",
+    "code": "RP",
+    "icon": "RP",
+    "description": "Fixes around the home or workplace."
+  },
+  {
+    "name": "Painting",
+    "code": "PT",
+    "icon": "PT",
+    "description": "Fresh coats, touch-ups, and tidy finish work."
+  },
+  {
+    "name": "Handyman",
+    "code": "HM",
+    "icon": "HM",
+    "description": "Odd jobs, mounting, assembly, and practical help."
+  },
+  {
+    "name": "Moving",
+    "code": "MV",
+    "icon": "MV",
+    "description": "Support for shifting items and setting up spaces."
+  },
+  {
+    "name": "Gardening",
+    "code": "GD",
+    "icon": "GD",
+    "description": "Garden care, clearing, trimming, and maintenance."
+  }
+]

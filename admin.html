@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="TIKKA operations dashboard.">
+    <title>TIKKA Operations</title>
+    <link rel="preload" href="public/brand/tikka-logo.jpg" as="image">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="ops">
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="ops-header">
+      <a class="brand" href="admin.html" aria-label="TIKKA operations home">
+        <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
+      </a>
+      <p class="ops-header__title">Operations</p>
+      <p class="ops-header__user" data-admin-name>Admin</p>
+      <button class="button button--secondary" type="button" data-admin-logout>Log out</button>
+    </header>
+
+    <div class="ops-shell">
+      <nav class="ops-nav" aria-label="Operations navigation">
+        <button type="button" class="is-active" data-ops-tab="overview">Overview</button>
+        <button type="button" data-ops-tab="jobs">Jobs</button>
+        <button type="button" data-ops-tab="providers">Providers</button>
+        <button type="button" data-ops-tab="categories">Categories</button>
+        <button type="button" data-ops-tab="reviews">Reviews</button>
+      </nav>
+
+      <main id="main" class="ops-main">
+        <p class="form-message" data-ops-message></p>
+
+        <section class="ops-panel is-active" data-ops-panel="overview">
+          <h1>Dashboard</h1>
+          <div class="ops-metrics" data-ops-metrics></div>
+          <div class="ops-split">
+            <section>
+              <h2>New job requests</h2>
+              <div class="ops-table-wrap" data-overview-jobs></div>
+            </section>
+            <section>
+              <h2>Pending provider approvals</h2>
+              <div class="ops-table-wrap" data-overview-providers></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="ops-panel" data-ops-panel="jobs">
+          <div class="ops-toolbar">
+            <h1>Job requests</h1>
+            <form class="ops-filters" data-job-filters>
+              <label>
+                <span class="sr-only">Search jobs</span>
+                <input name="q" type="search" placeholder="Search reference, customer, service">
+              </label>
+              <label>
+                <span class="sr-only">Filter by status</span>
+                <select name="status">
+                  <option value="">All statuses</option>
+                  <option>NEW</option>
+                  <option>REVIEWING</option>
+                  <option>ASSIGNED</option>
+                  <option>ACCEPTED</option>
+                  <option>IN_PROGRESS</option>
+                  <option>COMPLETED</option>
+                  <option>CONFIRMED</option>
+                  <option>CANCELLED</option>
+                  <option>REJECTED</option>
+                </select>
+              </label>
+              <button class="button button--secondary" type="submit">Filter</button>
+            </form>
+          </div>
+          <div class="ops-layout">
+            <div class="ops-table-wrap" data-job-table></div>
+            <aside class="ops-detail" data-job-detail>
+              <p class="muted">Select a job to review, assign, or update status.</p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="ops-panel" data-ops-panel="providers">
+          <h1>Providers</h1>
+          <div class="ops-layout">
+            <div class="ops-table-wrap" data-provider-table></div>
+            <aside class="ops-detail" data-provider-detail>
+              <p class="muted">Select a provider to review verification and approval.</p>
+            </aside>
+          </div>
+        </section>
+
+        <section class="ops-panel" data-ops-panel="categories">
+          <h1>Service categories</h1>
+          <div class="ops-split">
+            <form class="ops-form" data-category-form>
+              <h2 data-category-form-title>Create category</h2>
+              <input type="hidden" name="id">
+              <label>
+                <span>Name</span>
+                <input name="name" required maxlength="80">
+              </label>
+              <label>
+                <span>Code</span>
+                <input name="code" maxlength="8" placeholder="CL">
+              </label>
+              <label>
+                <span>Description</span>
+                <textarea name="description" rows="3" required maxlength="240"></textarea>
+              </label>
+              <label class="ops-check">
+                <input name="enabled" type="checkbox" checked>
+                <span>Enabled</span>
+              </label>
+              <div class="ops-actions">
+                <button class="button button--primary" type="submit">Save category</button>
+                <button class="button button--secondary" type="button" data-category-reset>New</button>
+              </div>
+            </form>
+            <div class="ops-table-wrap" data-category-table></div>
+          </div>
+        </section>
+
+        <section class="ops-panel" data-ops-panel="reviews">
+          <h1>Reviews</h1>
+          <div class="ops-table-wrap" data-review-table></div>
+        </section>
+      </main>
+    </div>
+    <script src="admin.js"></script>
+  </body>
+</html>

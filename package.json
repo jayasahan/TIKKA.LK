@@ -1,0 +1,21 @@
+{
+  "name": "tikka-mvp",
+  "version": "0.2.0",
+  "private": true,
+  "description": "TIKKA MVP static frontend and minimal Node backend.",
+  "scripts": {
+    "start": "node server.js",
+    "typecheck": "node --check scripts/build.js && node --check scripts/lint.js && node --check scripts/test.js && node --check script.js && node --check app.js && node --check provider.js && node --check server.js && node --check lib/auth.js && node --check lib/constants.js && node --check lib/db.js && node --check lib/validation.js",
+    "lint": "node scripts/lint.js",
+    "test": "node scripts/test.js",
+    "build": "node scripts/build.js"
+  },
+  "keywords": [
+    "tikka",
+    "handyman",
+    "services",
+    "sri-lanka"
+  ],
+  "author": "",
+  "license": "UNLICENSED"
+}

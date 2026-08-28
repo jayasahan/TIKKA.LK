@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="TIKKA operations sign in.">
+    <title>TIKKA Admin Sign In</title>
+    <link rel="preload" href="public/brand/tikka-logo.jpg" as="image">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body class="ops">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <main id="main" class="ops-login">
+      <section class="ops-login__card">
+        <a class="brand" href="index.html" aria-label="TIKKA home">
+          <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
+        </a>
+        <p class="eyebrow">Operations</p>
+        <h1>Admin sign in</h1>
+        <p>This area is for TIKKA operators. Customer and provider accounts cannot sign in here.</p>
+        <form data-admin-login novalidate>
+          <label>
+            <span>Email</span>
+            <input name="email" type="email" autocomplete="username" required>
+          </label>
+          <label>
+            <span>Password</span>
+            <input name="password" type="password" autocomplete="current-password" required>
+          </label>
+          <button class="button button--primary" type="submit">Sign in</button>
+          <p class="form-message" data-admin-login-message></p>
+        </form>
+      </section>
+    </main>
+    <script>
+      const form = document.querySelector("[data-admin-login]");
+      const message = document.querySelector("[data-admin-login-message]");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        message.textContent = "Signing in...";
+        try {
+          const body = Object.fromEntries(new FormData(form).entries());
+          const response = await fetch("/api/admin/login", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+          });
+          const payload = await response.json();
+          if (!response.ok) {
+            throw new Error(payload.error || "Sign in failed.");
+          }
+          window.location.replace("/admin.html");
+        } catch (error) {
+          message.textContent = error.message;
+          message.dataset.tone = "error";
+        }
+      });
+    </script>
+  </body>
+</html>

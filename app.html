@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="Submit and track customer service requests with TIKKA."
+    >
+    <title>TIKKA Customer Requests</title>
+    <link rel="preload" href="public/brand/tikka-logo.jpg" as="image">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="site-header" data-header>
+      <nav class="nav container" aria-label="Primary navigation">
+        <a class="brand" href="index.html#home" aria-label="TIKKA home">
+          <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
+        </a>
+
+        <button
+          class="nav-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="primary-menu"
+          data-nav-toggle
+        >
+          <span class="nav-toggle__line"></span>
+          <span class="nav-toggle__line"></span>
+          <span class="nav-toggle__line"></span>
+          <span class="sr-only">Open menu</span>
+        </button>
+
+        <div class="nav-menu" id="primary-menu" data-nav-menu>
+          <a href="index.html#home">Home</a>
+          <a href="#services">Services</a>
+          <a href="#request">Request Job</a>
+          <a href="#tracking">Track Request</a>
+        </div>
+
+        <button class="button button--secondary nav-cta" type="button" data-logout hidden>Log out</button>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="app-hero section">
+        <div class="container app-hero__inner">
+          <div>
+            <p class="eyebrow">Customer Workflow</p>
+            <h1>Get a real job into TIKKA.</h1>
+            <p>
+              Browse a service, describe the work, submit your request, and track it through review,
+              assignment, completion, and review.
+            </p>
+          </div>
+          <div class="status-panel glass-panel" data-session-panel>
+            <p class="eyebrow">Account</p>
+            <h2 data-session-title>Sign in or create an account</h2>
+            <p data-session-copy>Your requests are protected and only visible to your account.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tight" aria-labelledby="auth-title">
+        <div class="container app-grid">
+          <section class="form-card" aria-labelledby="auth-title">
+            <p class="eyebrow">Customer Access</p>
+            <h2 id="auth-title">Register or log in</h2>
+            <form class="auth-form" data-auth-form novalidate>
+              <div class="form-grid">
+                <label>
+                  <span>Name <em>required for registration</em></span>
+                  <input name="name" autocomplete="name">
+                </label>
+                <label>
+                  <span>Phone <em>required for registration</em></span>
+                  <input name="phone" autocomplete="tel">
+                </label>
+                <label>
+                  <span>Email <em>required</em></span>
+                  <input name="email" type="email" autocomplete="email" required>
+                </label>
+                <label>
+                  <span>Password <em>required</em></span>
+                  <input name="password" type="password" autocomplete="current-password" required minlength="8">
+                </label>
+              </div>
+              <div class="form-actions">
+                <button class="button button--primary" type="submit" name="mode" value="register">Create account</button>
+                <button class="button button--secondary" type="submit" name="mode" value="login">Log in</button>
+              </div>
+              <div class="form-message" data-auth-message role="status"></div>
+            </form>
+          </section>
+
+          <section class="form-card" aria-labelledby="tracking-title" id="tracking">
+            <p class="eyebrow">Tracking</p>
+            <h2 id="tracking-title">Your requests</h2>
+            <div class="request-list" data-request-list>
+              <p class="muted">Log in to see your requests.</p>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="section section--tight" id="services" aria-labelledby="service-browser-title">
+        <div class="container">
+          <div class="section-heading">
+            <p class="eyebrow">Browse Services</p>
+            <h2 id="service-browser-title">Choose the service that fits the job.</h2>
+          </div>
+          <div class="service-grid" data-customer-services></div>
+        </div>
+      </section>
+
+      <section class="section request-flow" id="request" aria-labelledby="request-form-title">
+        <div class="container request-layout">
+          <div class="section-heading">
+            <p class="eyebrow">Job Request</p>
+            <h2 id="request-form-title">Describe the job clearly.</h2>
+            <p class="muted">Required fields are marked. Photos are optional and stored as file names in this MVP.</p>
+          </div>
+
+          <form class="form-card request-form" data-request-form novalidate>
+            <div class="form-grid">
+              <label>
+                <span>Service category <em>required</em></span>
+                <select name="service" required data-service-select>
+                  <option value="">Choose a service</option>
+                </select>
+              </label>
+              <label>
+                <span>Job title <em>required</em></span>
+                <input name="title" required maxlength="140" placeholder="Kitchen tap leak">
+              </label>
+              <label class="form-span">
+                <span>Job description <em>required</em></span>
+                <textarea name="description" required maxlength="1200" rows="5" placeholder="Tell us what needs to be done."></textarea>
+              </label>
+              <label>
+                <span>Customer name <em>required</em></span>
+                <input name="customerName" required autocomplete="name">
+              </label>
+              <label>
+                <span>Phone <em>required</em></span>
+                <input name="phone" required autocomplete="tel">
+              </label>
+              <label>
+                <span>Email <em>required</em></span>
+                <input name="email" type="email" required autocomplete="email">
+              </label>
+              <label>
+                <span>Address/location <em>required</em></span>
+                <input name="address" required autocomplete="street-address">
+              </label>
+              <label>
+                <span>Preferred date <em>required</em></span>
+                <input name="preferredDate" type="date" required>
+              </label>
+              <label>
+                <span>Preferred time <em>required</em></span>
+                <input name="preferredTime" type="time" required>
+              </label>
+              <label class="form-span">
+                <span>Optional photos <em>optional</em></span>
+                <input name="photos" type="file" accept="image/*" multiple>
+              </label>
+            </div>
+            <div class="form-actions">
+              <button class="button button--primary" type="submit" data-request-submit>Submit request</button>
+            </div>
+            <div class="form-message" data-request-message role="status"></div>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div>
+          <a class="brand footer-brand" href="index.html#home" aria-label="TIKKA home">
+            <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
+          </a>
+          <p>TIKKA connects customers with skilled people for repairs, cleaning, maintenance, and everyday jobs.</p>
+        </div>
+        <div>
+          <h2>Customer</h2>
+          <ul>
+            <li><a href="#services">Browse services</a></li>
+            <li><a href="#request">Submit request</a></li>
+            <li><a href="#tracking">Track request</a></li>
+          </ul>
+        </div>
+        <div>
+          <h2>Contact</h2>
+          <p>Contact details coming soon.</p>
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <p>&copy; 2026 TIKKA. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script src="script.js" defer></script>
+    <script src="app.js" defer></script>
+  </body>
+</html>
