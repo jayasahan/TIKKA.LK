@@ -42,9 +42,8 @@ const {
 } = require("./lib/validation");
 
 const publicRoot = path.resolve(__dirname);
-const defaultAdminEmail = (process.env.TIKKA_ADMIN_EMAIL || "admin@tikka.lk").toLowerCase();
-const defaultAdminPassword = process.env.TIKKA_ADMIN_PASSWORD || "tikka-admin-123";
 const protectedAdminAssets = new Set(["/admin.html", "/admin.js"]);
+let adminConfigWarningShown = false;
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -285,21 +284,55 @@ function dashboardMetrics(database) {
   };
 }
 
-function ensureDefaultAdmin(store) {
+function getAdminCredentials() {
+  const email = (process.env.TIKKA_ADMIN_EMAIL || "").trim().toLowerCase();
+  const password = process.env.TIKKA_ADMIN_PASSWORD || "";
+
+  if (!email || !password) {
+    return null;
+  }
+
+  return { email, password };
+}
+
+function warnAdminUnavailable() {
+  if (adminConfigWarningShown) {
+    return;
+  }
+  console.warn(
+    "TIKKA admin authentication is unavailable. Set TIKKA_ADMIN_EMAIL and TIKKA_ADMIN_PASSWORD to enable admin access."
+  );
+  adminConfigWarningShown = true;
+}
+
+function ensureConfiguredAdmin(store) {
+  const credentials = getAdminCredentials();
+  if (!credentials) {
+    warnAdminUnavailable();
+    return;
+  }
+
   store.update((database) => {
-    if (database.admins.length > 0) {
-      return database.admins[0];
+    const admin = database.admins.find((item) => item.email === credentials.email);
+    if (admin) {
+      admin.name = admin.name || "TIKKA Admin";
+      admin.role = admin.role || "admin";
+      if (!admin.passwordHash || !verifyPassword(credentials.password, admin.passwordHash)) {
+        admin.passwordHash = hashPassword(credentials.password);
+      }
+      return admin;
     }
-    const admin = {
+
+    const createdAdmin = {
       id: createId("admin"),
       name: "TIKKA Admin",
-      email: defaultAdminEmail,
-      passwordHash: hashPassword(defaultAdminPassword),
+      email: credentials.email,
+      passwordHash: hashPassword(credentials.password),
       role: "admin",
       createdAt: new Date().toISOString()
     };
-    database.admins.push(admin);
-    return admin;
+    database.admins.push(createdAdmin);
+    return createdAdmin;
   });
 }
 
@@ -338,15 +371,12 @@ function requireProvider(request, response, store) {
 }
 
 function requireAdmin(request, response, store) {
-  const database = store.read();
-  const token = request.headers["x-tikka-operator-token"] || request.headers["X-TIKKA-OPERATOR-TOKEN"];
-  if (token === "dev-operator-token") {
-    const admin = database.admins[0];
-    if (admin) {
-      return { admin, database, session: { adminId: admin.id } };
-    }
+  if (!getAdminCredentials()) {
+    sendJson(response, 503, { error: "Admin authentication is not configured." });
+    return null;
   }
 
+  const database = store.read();
   const session = getAdminSession(request);
   if (!session) {
     sendJson(response, 401, { error: "Please log in as an admin." });
@@ -384,6 +414,7 @@ function matchesSearch(request, query) {
 
 async function handleApi(request, response, store, url) {
   try {
+    // TODO: Add CSRF protection and login rate limiting before public launch.
     if (request.method === "GET" && url.pathname === "/api/services") {
       const database = store.read();
       sendJson(response, 200, { services: enabledCategories(database).map(exposeCategory) });
@@ -458,6 +489,12 @@ async function handleApi(request, response, store, url) {
     }
 
     if (request.method === "POST" && url.pathname === "/api/admin/login") {
+      const credentials = getAdminCredentials();
+      if (!credentials) {
+        sendJson(response, 503, { error: "Admin authentication is not configured." });
+        return;
+      }
+
       const body = await readJsonBody(request);
       const { errors, value } = validateLogin(body);
       if (hasErrors(errors)) {
@@ -466,7 +503,11 @@ async function handleApi(request, response, store, url) {
       }
 
       const database = store.read();
-      const admin = database.admins.find((item) => item.email === value.email);
+      const admin = database.admins.find((item) => item.email === credentials.email);
+      if (value.email !== credentials.email) {
+        sendJson(response, 401, { error: "Email or password is incorrect." });
+        return;
+      }
       if (!admin || !verifyPassword(value.password, admin.passwordHash)) {
         sendJson(response, 401, { error: "Email or password is incorrect." });
         return;
@@ -1289,7 +1330,7 @@ function serveStatic(request, response, url, store) {
 
 function createApp(options = {}) {
   const store = createStore(options.dbPath);
-  ensureDefaultAdmin(store);
+  ensureConfiguredAdmin(store);
 
   return http.createServer((request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);

@@ -2,6 +2,10 @@ const fs = require("node:fs");
 const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
+
+process.env.TIKKA_ADMIN_EMAIL = "admin.test@example.com";
+process.env.TIKKA_ADMIN_PASSWORD = "admin-test-password";
+
 const { createApp } = require("../server");
 const { resetSessions } = require("../lib/auth");
 
@@ -15,7 +19,7 @@ const serviceData = JSON.parse(
 );
 
 const requiredText = [
-  "Someone for every job.",
+  "Someone for every job",
   "Get a Job Done",
   "Become a Service Provider",
   "Tell us what you need.",
@@ -181,10 +185,21 @@ async function runEndToEnd() {
     response = await request(
       port,
       "POST",
-      `/api/operator/requests/${requestId}/assign`,
+      "/api/admin/login",
+      {
+        email: process.env.TIKKA_ADMIN_EMAIL,
+        password: process.env.TIKKA_ADMIN_PASSWORD
+      }
+    );
+    assertStatus(response, 200, "admin login");
+    const adminCookie = response.cookie;
+
+    response = await request(
+      port,
+      "POST",
+      `/api/admin/requests/${requestId}/assign`,
       { providerId: "provider-sunil", scheduledAt: "2026-09-01T10:30:00.000Z" },
-      null,
-      { "X-TIKKA-OPERATOR-TOKEN": "dev-operator-token" }
+      adminCookie
     );
     assertStatus(response, 200, "assign provider placeholder");
     assert(response.body.request.status === "ASSIGNED", "assigned request should be ASSIGNED");
@@ -194,10 +209,9 @@ async function runEndToEnd() {
       response = await request(
         port,
         "POST",
-        `/api/operator/requests/${requestId}/status`,
+        `/api/admin/requests/${requestId}/status`,
         { status },
-        null,
-        { "X-TIKKA-OPERATOR-TOKEN": "dev-operator-token" }
+        adminCookie
       );
       assertStatus(response, 200, `transition to ${status}`);
     }
@@ -243,10 +257,9 @@ async function runEndToEnd() {
     response = await request(
       port,
       "POST",
-      `/api/operator/providers/${providerId}/state`,
+      `/api/admin/providers/${providerId}/state`,
       { state: "APPROVED" },
-      null,
-      { "X-TIKKA-OPERATOR-TOKEN": "dev-operator-token" }
+      adminCookie
     );
     assertStatus(response, 200, "admin approval");
     assert(response.body.provider.state === "APPROVED", "provider should be approved by operator");
@@ -276,10 +289,9 @@ async function runEndToEnd() {
     response = await request(
       port,
       "POST",
-      `/api/operator/requests/${providerJobId}/assign`,
+      `/api/admin/requests/${providerJobId}/assign`,
       { providerId, scheduledAt: "2026-09-03T15:00:00.000Z" },
-      null,
-      { "X-TIKKA-OPERATOR-TOKEN": "dev-operator-token" }
+      adminCookie
     );
     assertStatus(response, 200, "assign approved provider");
     assert(response.body.request.assignedProvider.id === providerId, "assigned provider mismatch");
