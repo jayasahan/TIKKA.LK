@@ -1,4 +1,4 @@
-require("dotenv").config({ quiet: true });
+require("dotenv").config({ path: require("node:path").resolve(__dirname, "..", "..", ".env"), quiet: true });
 
 const http = require("node:http");
 const fs = require("node:fs");

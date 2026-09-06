@@ -11,6 +11,7 @@ dist/
 
 # Runtime storage
 storage/*.json
+apps/*/storage/*.json
 
 # Logs
 logs/
