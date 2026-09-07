@@ -13,7 +13,6 @@ const { resetSessions } = require("../lib/auth");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const appHtml = fs.readFileSync(path.join(root, "app.html"), "utf8");
-const providerHtml = fs.readFileSync(path.join(root, "provider.html"), "utf8");
 const adminHtml = fs.readFileSync(path.join(root, "admin.html"), "utf8");
 const adminJs = fs.readFileSync(path.join(root, "admin.js"), "utf8");
 const buildJs = fs.readFileSync(path.join(root, "scripts", "build.js"), "utf8");
@@ -25,7 +24,7 @@ const serviceData = JSON.parse(
 const requiredText = [
   "Someone for every job",
   "Get a Job Done",
-  "Become a Service Provider",
+  "Browse Services",
   "Tell us what you need.",
   "We find the right person.",
   "Get the job done.",
@@ -117,11 +116,6 @@ if (/independent provider|marketplace|assigned provider|service provider/i.test(
   failed = true;
 }
 
-if (!providerHtml.includes("data-provider-auth-form") || !providerHtml.includes("data-provider-jobs")) {
-  console.error("Provider workflow UI is missing.");
-  failed = true;
-}
-
 if (!adminHtml.includes('data-ops-tab="workers"') || !adminHtml.includes('data-worker-form')) {
   console.error("Admin worker management UI is missing.");
   failed = true;
@@ -146,6 +140,13 @@ for (const requiredBuiltAsset of ["admin-login.html", "admin.html", "admin.js"])
   }
 }
 
+for (const removedBuiltAsset of ["provider.html", "provider.js"]) {
+  if (buildJs.includes(`\"${removedBuiltAsset}\"`)) {
+    console.error(`Build still includes removed provider asset: ${removedBuiltAsset}`);
+    failed = true;
+  }
+}
+
 if (!adminJs.includes("error.status = response.status") || !adminJs.includes("error.status === 401 || error.status === 403")) {
   console.error("Admin bootstrap must redirect only for an unauthorized response.");
   failed = true;
@@ -157,6 +158,15 @@ const productionCookieFlags = childProcess.execFileSync(process.execPath, [
 ], { cwd: root, encoding: "utf8" });
 if (!productionCookieFlags.includes("Secure")) {
   console.error("Production admin cookies must include Secure.");
+  failed = true;
+}
+
+const productionStorageDefault = childProcess.spawnSync(process.execPath, [
+  "-e",
+  "process.env.NODE_ENV='production'; process.env.TIKKA_STORAGE_DRIVER=''; process.env.DATABASE_URL=''; try { require('./lib/storage').createStorage(); process.exit(1); } catch (error) { console.log(error.message); }"
+], { cwd: root, encoding: "utf8" });
+if (!productionStorageDefault.stdout.includes("DATABASE_URL is required when TIKKA_STORAGE_DRIVER=postgres")) {
+  console.error("Production storage must default to PostgreSQL when no driver is configured.");
   failed = true;
 }
 
@@ -220,6 +230,10 @@ function futureIso(days = 7) {
   return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+function csrfHeader(token) {
+  return { "X-CSRF-Token": token };
+}
+
 async function runEndToEnd() {
   resetSessions();
   const dbPath = path.join(os.tmpdir(), `tikka-test-${Date.now()}.json`);
@@ -230,6 +244,39 @@ async function runEndToEnd() {
     let response = await request(port, "GET", "/api/services");
     assertStatus(response, 200, "browse services");
     assert(response.body.services.length === 8, "expected eight services");
+    assert(response.headers["x-content-type-options"] === "nosniff", "API responses must include nosniff");
+    assert(response.headers["referrer-policy"] === "strict-origin-when-cross-origin", "API responses must include referrer policy");
+    assert(response.headers["x-frame-options"] === "SAMEORIGIN", "API responses must include frame protection");
+
+    response = await request(port, "GET", "/health");
+    assertStatus(response, 200, "health endpoint");
+    assert(response.body.status === "ok", "health endpoint should return safe ok status");
+    assert(response.headers["x-content-type-options"] === "nosniff", "health response must include security headers");
+
+    response = await request(port, "GET", "/");
+    assertStatus(response, 200, "serve landing page");
+    assert(response.headers["x-content-type-options"] === "nosniff", "static responses must include security headers");
+
+    response = await request(port, "GET", "/provider.html");
+    assertStatus(response, 404, "removed provider page");
+    response = await request(port, "GET", "/provider.js");
+    assertStatus(response, 404, "removed provider script");
+    response = await request(port, "POST", "/api/providers/register", {
+      name: "Kasun Jayawardena",
+      phone: "+94775550123",
+      email: "kasun.provider@example.com",
+      password: "provider123"
+    });
+    assertStatus(response, 404, "removed provider registration API");
+    response = await request(port, "POST", "/api/providers/login", {
+      email: "kasun.provider@example.com",
+      password: "provider123"
+    });
+    assertStatus(response, 404, "removed provider login API");
+    response = await request(port, "GET", "/api/providers/me");
+    assertStatus(response, 404, "removed provider session API");
+    response = await request(port, "GET", "/api/providers/jobs");
+    assertStatus(response, 404, "removed provider jobs API");
 
     response = await request(port, "POST", "/api/auth/register", {
       name: "Amali Silva",
@@ -239,6 +286,39 @@ async function runEndToEnd() {
     });
     assertStatus(response, 201, "customer registration");
     const customerCookie = response.cookie;
+    let customerCsrf = response.body.csrfToken;
+    assert(customerCsrf, "customer registration should return CSRF token");
+
+    response = await request(port, "POST", "/api/auth/login", {
+      email: "amali@example.com",
+      password: "wrong-password"
+    });
+    assertStatus(response, 401, "failed customer login");
+    response = await request(port, "POST", "/api/auth/login", {
+      email: "amali@example.com",
+      password: "wrong-password"
+    });
+    assertStatus(response, 401, "second failed customer login");
+    response = await request(port, "POST", "/api/auth/login", {
+      email: "amali@example.com",
+      password: "wrong-password"
+    });
+    assertStatus(response, 401, "third failed customer login");
+    response = await request(port, "POST", "/api/auth/login", {
+      email: "amali@example.com",
+      password: "wrong-password"
+    });
+    assertStatus(response, 401, "fourth failed customer login");
+    response = await request(port, "POST", "/api/auth/login", {
+      email: "amali@example.com",
+      password: "password123"
+    });
+    assertStatus(response, 200, "successful login resets customer rate limit");
+    response = await request(port, "POST", "/api/auth/login", {
+      email: "amali@example.com",
+      password: "wrong-password"
+    });
+    assertStatus(response, 401, "customer login remains usable after reset");
 
     response = await request(port, "POST", "/api/requests", {
       service: "Cleaning",
@@ -252,6 +332,34 @@ async function runEndToEnd() {
       preferredTime: "10:30",
       photos: ["kitchen.jpg"]
     }, customerCookie);
+    assertStatus(response, 403, "customer protected POST without CSRF");
+
+    response = await request(port, "POST", "/api/requests", {
+      service: "Cleaning",
+      title: "Apartment cleaning",
+      description: "Need a careful clean before moving in.",
+      customerName: "Amali Silva",
+      phone: "+94771234567",
+      email: "amali@example.com",
+      address: "Colombo 05",
+      preferredDate: "2026-09-01",
+      preferredTime: "10:30",
+      photos: ["kitchen.jpg"]
+    }, customerCookie, { "X-CSRF-Token": "invalid" });
+    assertStatus(response, 403, "customer protected POST with invalid CSRF");
+
+    response = await request(port, "POST", "/api/requests", {
+      service: "Cleaning",
+      title: "Apartment cleaning",
+      description: "Need a careful clean before moving in.",
+      customerName: "Amali Silva",
+      phone: "+94771234567",
+      email: "amali@example.com",
+      address: "Colombo 05",
+      preferredDate: "2026-09-01",
+      preferredTime: "10:30",
+      photos: ["kitchen.jpg"]
+    }, customerCookie, csrfHeader(customerCsrf));
     assertStatus(response, 201, "submit request");
     assert(response.body.message === "Request received.", "confirmation message missing");
     const requestId = response.body.request.id;
@@ -264,6 +372,8 @@ async function runEndToEnd() {
     response = await request(port, "GET", "/api/auth/me", null, customerCookie);
     assertStatus(response, 200, "restore customer session");
     assert(response.body.customer.name === "Amali Silva", "session restore should include customer name");
+    customerCsrf = response.body.csrfToken;
+    assert(customerCsrf, "customer session restore should include CSRF token");
 
     response = await request(port, "POST", "/api/auth/register", {
       name: "Different Customer",
@@ -286,6 +396,8 @@ async function runEndToEnd() {
     );
     assertStatus(response, 200, "admin login");
     let adminCookie = response.cookie;
+    let adminCsrf = response.body.csrfToken;
+    assert(adminCsrf, "admin login should return CSRF token");
     assert(response.headers["set-cookie"][0].includes("HttpOnly"), "admin login should set HttpOnly cookie");
     assert(response.headers["set-cookie"][0].includes("SameSite=Lax"), "admin login should set SameSite=Lax cookie");
     assert(response.headers["set-cookie"][0].includes("Path=/"), "admin login should set root cookie path");
@@ -293,6 +405,8 @@ async function runEndToEnd() {
 
     response = await request(port, "GET", "/api/admin/me", null, adminCookie);
     assertStatus(response, 200, "admin session restore");
+    adminCsrf = response.body.csrfToken;
+    assert(adminCsrf, "admin session restore should include CSRF token");
     response = await request(port, "GET", "/admin.html", null, adminCookie);
     assertStatus(response, 200, "authenticated admin page refresh");
 
@@ -302,6 +416,20 @@ async function runEndToEnd() {
     });
     assertStatus(response, 401, "invalid admin login");
 
+    for (let index = 0; index < 5; index += 1) {
+      response = await request(port, "POST", "/api/admin/login", {
+        email: "missing-admin@example.com",
+        password: "incorrect-password"
+      }, null, { "X-Forwarded-For": `203.0.113.${index + 1}` });
+      assertStatus(response, 401, "failed admin login does not reveal account existence");
+    }
+    response = await request(port, "POST", "/api/admin/login", {
+      email: "missing-admin@example.com",
+      password: "incorrect-password"
+    }, null, { "X-Forwarded-For": "203.0.113.99" });
+    assertStatus(response, 429, "repeated failed admin login eventually rate limited");
+    assert(response.body.error === "Too many attempts. Please try again later.", "rate limit message should be safe");
+
     response = await request(port, "POST", "/api/admin/workers", {
       name: "Test Operations Worker",
       phone: "+94774440000",
@@ -309,6 +437,24 @@ async function runEndToEnd() {
       skills: ["Cleaning"],
       services: ["Cleaning"]
     }, adminCookie);
+    assertStatus(response, 403, "admin protected POST without CSRF");
+
+    response = await request(port, "POST", "/api/admin/workers", {
+      name: "Test Operations Worker",
+      phone: "+94774440000",
+      serviceArea: "Colombo",
+      skills: ["Cleaning"],
+      services: ["Cleaning"]
+    }, adminCookie, { "X-CSRF-Token": "invalid" });
+    assertStatus(response, 403, "admin protected POST with invalid CSRF");
+
+    response = await request(port, "POST", "/api/admin/workers", {
+      name: "Test Operations Worker",
+      phone: "+94774440000",
+      serviceArea: "Colombo",
+      skills: ["Cleaning"],
+      services: ["Cleaning"]
+    }, adminCookie, csrfHeader(adminCsrf));
     assertStatus(response, 201, "admin creates worker");
     const workerId = response.body.worker.id;
 
@@ -317,7 +463,8 @@ async function runEndToEnd() {
       "POST",
       `/api/admin/requests/${requestId}/schedule`,
       { scheduledAt: "not-a-date" },
-      adminCookie
+      adminCookie,
+      csrfHeader(adminCsrf)
     );
     assertStatus(response, 400, "reject invalid schedule date");
 
@@ -326,7 +473,8 @@ async function runEndToEnd() {
       "POST",
       `/api/admin/requests/${requestId}/assign-worker`,
       { workerId },
-      adminCookie
+      adminCookie,
+      csrfHeader(adminCsrf)
     );
     assertStatus(response, 409, "prevent assignment before scheduling");
 
@@ -335,7 +483,8 @@ async function runEndToEnd() {
       "POST",
       `/api/admin/requests/${requestId}/status`,
       { status: "REVIEWING" },
-      adminCookie
+      adminCookie,
+      csrfHeader(adminCsrf)
     );
     assertStatus(response, 200, "transition to REVIEWING");
 
@@ -345,7 +494,8 @@ async function runEndToEnd() {
       "POST",
       `/api/admin/requests/${requestId}/schedule`,
       { scheduledAt },
-      adminCookie
+      adminCookie,
+      csrfHeader(adminCsrf)
     );
     assertStatus(response, 200, "schedule request");
     assert(response.body.request.status === "SCHEDULED", "scheduled request should be SCHEDULED");
@@ -360,7 +510,8 @@ async function runEndToEnd() {
       "POST",
       `/api/admin/requests/${requestId}/assign-worker`,
       { workerId },
-      adminCookie
+      adminCookie,
+      csrfHeader(adminCsrf)
     );
     assertStatus(response, 200, "assign worker");
     assert(response.body.request.status === "ASSIGNED", "assigned request should be ASSIGNED");
@@ -376,22 +527,27 @@ async function runEndToEnd() {
         "POST",
         `/api/admin/requests/${requestId}/status`,
         { status },
-        adminCookie
+        adminCookie,
+        csrfHeader(adminCsrf)
       );
       assertStatus(response, 200, `transition to ${status}`);
     }
 
     response = await request(port, "POST", `/api/requests/${requestId}/confirm`, null, customerCookie);
+    assertStatus(response, 403, "customer confirm without CSRF");
+    response = await request(port, "POST", `/api/requests/${requestId}/confirm`, null, customerCookie, csrfHeader(customerCsrf));
     assertStatus(response, 200, "confirm completion");
     assert(response.body.request.status === "CONFIRMED", "confirmed request should be CONFIRMED");
 
     response = await request(port, "POST", `/api/requests/${requestId}/review`, {
       rating: 5,
       comment: "Clean and well coordinated."
-    }, customerCookie);
+    }, customerCookie, csrfHeader(customerCsrf));
     assertStatus(response, 201, "submit review");
 
     response = await request(port, "POST", "/api/admin/logout", null, adminCookie);
+    assertStatus(response, 403, "admin logout without CSRF");
+    response = await request(port, "POST", "/api/admin/logout", null, adminCookie, csrfHeader(adminCsrf));
     assertStatus(response, 200, "admin logout");
     response = await request(port, "GET", "/api/admin/me", null, adminCookie);
     assertStatus(response, 401, "logout invalidates admin session");
@@ -401,118 +557,16 @@ async function runEndToEnd() {
     });
     assertStatus(response, 200, "admin login after logout");
     adminCookie = response.cookie;
+    adminCsrf = response.body.csrfToken;
 
     response = await request(port, "POST", `/api/requests/${requestId}/review`, {
       rating: 4,
       comment: "Second review should fail."
-    }, customerCookie);
+    }, customerCookie, csrfHeader(customerCsrf));
     assertStatus(response, 409, "prevent duplicate review");
 
-    response = await request(port, "POST", "/api/providers/register", {
-      name: "Kasun Jayawardena",
-      phone: "+94775550123",
-      email: "kasun.provider@example.com",
-      password: "provider123",
-      profilePhoto: "kasun.jpg",
-      skills: ["Repairs", "Painting"],
-      services: ["Repairs", "Painting"],
-      serviceArea: "Colombo",
-      description: "Careful repair and painting support.",
-      experienceYears: 6,
-      qualifications: "NVQ maintenance training"
-    });
-    assertStatus(response, 201, "provider registration");
-    assert(response.body.provider.state === "REGISTERED", "provider should start as REGISTERED");
-    const providerId = response.body.provider.id;
-    const providerCookie = response.cookie;
-
-    response = await request(port, "POST", "/api/providers/verification", null, providerCookie);
-    assertStatus(response, 200, "provider verification submission");
-    assert(response.body.provider.state === "PENDING_VERIFICATION", "provider should be pending verification");
-
-    response = await request(
-      port,
-      "POST",
-      `/api/admin/providers/${providerId}/state`,
-      { state: "APPROVED" },
-      adminCookie
-    );
-    assertStatus(response, 200, "admin approval");
-    assert(response.body.provider.state === "APPROVED", "provider should be approved by operator");
-
-    response = await request(port, "POST", "/api/providers/login", {
-      email: "kasun.provider@example.com",
-      password: "provider123"
-    });
-    assertStatus(response, 200, "provider login");
-    const approvedProviderCookie = response.cookie;
-
-    response = await request(port, "POST", "/api/requests", {
-      service: "Repairs",
-      title: "Fix pantry cupboard",
-      description: "Cupboard hinge is loose and door is dropping.",
-      customerName: "Amali Silva",
-      phone: "+94771234567",
-      email: "amali@example.com",
-      address: "Nugegoda",
-      preferredDate: "2026-09-03",
-      preferredTime: "15:00",
-      photos: []
-    }, customerCookie);
-    assertStatus(response, 201, "submit provider job request");
-    const providerJobId = response.body.request.id;
-
-    response = await request(
-      port,
-      "POST",
-      `/api/admin/requests/${providerJobId}/assign`,
-      { providerId, scheduledAt: futureIso(8) },
-      adminCookie
-    );
-    assertStatus(response, 200, "assign approved provider");
-    assert(response.body.request.assignedProvider.id === providerId, "assigned provider mismatch");
-
-    response = await request(port, "GET", "/api/providers/jobs", null, approvedProviderCookie);
-    assertStatus(response, 200, "provider assigned jobs");
-    assert(response.body.jobs.some((job) => job.id === providerJobId), "assigned job missing from provider dashboard");
-
-    response = await request(port, "POST", "/api/providers/register", {
-      name: "Other Provider",
-      phone: "+94775550999",
-      email: "other.provider@example.com",
-      password: "provider123",
-      skills: ["Cleaning"],
-      services: ["Cleaning"],
-      serviceArea: "Colombo",
-      description: "Cleaning support.",
-      experienceYears: 2,
-      qualifications: "Cleaning experience"
-    });
-    assertStatus(response, 201, "other provider registration");
-    response = await request(port, "GET", "/api/providers/jobs", null, response.cookie);
-    assertStatus(response, 200, "other provider cannot list assigned job");
-    assert(!response.body.jobs.some((job) => job.id === providerJobId), "unassigned provider should not see another job");
-
-    for (const action of ["accept", "start", "complete"]) {
-      response = await request(
-        port,
-        "POST",
-        `/api/providers/jobs/${providerJobId}/${action}`,
-        null,
-        approvedProviderCookie
-      );
-      assertStatus(response, 200, `provider ${action}`);
-    }
-    assert(response.body.job.status === "COMPLETED", "provider should complete the job");
-
-    response = await request(
-      port,
-      "POST",
-      `/api/providers/jobs/${providerJobId}/start`,
-      null,
-      approvedProviderCookie
-    );
-    assertStatus(response, 409, "prevent invalid provider transition");
+    response = await request(port, "POST", "/api/admin/providers/provider-test/state", { state: "APPROVED" }, adminCookie, csrfHeader(adminCsrf));
+    assertStatus(response, 404, "removed admin provider approval API");
   } finally {
     await close(server);
     fs.rmSync(dbPath, { force: true });
@@ -535,7 +589,7 @@ if (failed) {
 
 runEndToEnd()
   .then(() => {
-    console.log("Content, customer workflow, and provider workflow tests passed.");
+    console.log("Content, customer, admin, worker, and provider-removal tests passed.");
   })
   .catch((error) => {
     console.error(error.message);

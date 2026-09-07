@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { JOB_STATUSES, PROVIDER_STATES } = require("./constants");
+const { JOB_STATUSES } = require("./constants");
 
 const serviceData = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "..", "data", "services.json"), "utf8")
@@ -138,21 +138,6 @@ function validateRequest(body, categories = serviceData) {
   };
 }
 
-function validateAssignment(body, database) {
-  const errors = {};
-  const providerId = requireField(errors, body, "providerId", "Provider", 80);
-  const scheduledAt = cleanString(body.scheduledAt);
-
-  if (providerId && !database.providers.some((provider) => provider.id === providerId)) {
-    errors.providerId = "Choose an existing provider.";
-  }
-
-  return {
-    errors,
-    value: { providerId, scheduledAt }
-  };
-}
-
 function validateStatus(body) {
   const errors = {};
   const status = requireField(errors, body, "status", "Status", 40);
@@ -171,17 +156,18 @@ function validateSchedule(body) {
   const errors = {};
   const scheduledAt = requireField(errors, body, "scheduledAt", "Scheduled date and time", 80);
   const parsed = scheduledAt ? new Date(scheduledAt) : null;
+  const hasValidDate = parsed && !Number.isNaN(parsed.getTime());
 
-  if (scheduledAt && Number.isNaN(parsed.getTime())) {
+  if (scheduledAt && !hasValidDate) {
     errors.scheduledAt = "Enter a valid scheduled date and time.";
-  } else if (parsed && parsed.getTime() <= Date.now()) {
+  } else if (hasValidDate && parsed.getTime() <= Date.now()) {
     errors.scheduledAt = "Choose a future scheduled date and time.";
   }
 
   return {
     errors,
     value: {
-      scheduledAt: parsed ? parsed.toISOString() : scheduledAt
+      scheduledAt: hasValidDate ? parsed.toISOString() : scheduledAt
     }
   };
 }
@@ -212,83 +198,6 @@ function cleanStringArray(value) {
       .filter(Boolean);
   }
   return [];
-}
-
-function validateProviderRegistration(body, categories = serviceData) {
-  const allowedServices = activeServiceNames(categories);
-  const errors = {};
-  const name = requireField(errors, body, "name", "Full name", 120);
-  const phone = requireField(errors, body, "phone", "Phone", 30);
-  const email = cleanString(body.email).toLowerCase();
-  const password = isString(body.password) ? body.password : "";
-  const profilePhoto = cleanString(body.profilePhoto) || "public/brand/tikka-logo.jpg";
-  const skills = cleanStringArray(body.skills).slice(0, 12);
-  const services = cleanStringArray(body.services).slice(0, 8);
-  const serviceArea = requireField(errors, body, "serviceArea", "Service area", 160);
-  const description = requireField(errors, body, "description", "Professional description", 800);
-  const experienceYears = Number(body.experienceYears);
-  const qualifications = requireField(errors, body, "qualifications", "Qualification or certification information", 800);
-
-  if (!email) {
-    errors.email = "Email is required.";
-  } else if (!isEmail(email)) {
-    errors.email = "Enter a valid email address.";
-  }
-
-  if (phone && !isPhone(phone)) {
-    errors.phone = "Enter a valid phone number.";
-  }
-
-  if (!password) {
-    errors.password = "Password is required.";
-  } else if (password.length < 8) {
-    errors.password = "Password must be at least 8 characters.";
-  }
-
-  if (skills.length === 0) {
-    errors.skills = "Add at least one skill.";
-  }
-
-  if (services.length === 0) {
-    errors.services = "Choose at least one service.";
-  } else if (services.some((service) => !allowedServices.includes(service))) {
-    errors.services = "Choose only available services.";
-  }
-
-  if (!Number.isInteger(experienceYears) || experienceYears < 0 || experienceYears > 80) {
-    errors.experienceYears = "Enter valid years of experience.";
-  }
-
-  return {
-    errors,
-    value: {
-      name,
-      phone,
-      email,
-      password,
-      profilePhoto,
-      skills,
-      services,
-      serviceArea,
-      description,
-      experienceYears,
-      qualifications
-    }
-  };
-}
-
-function validateProviderState(body) {
-  const errors = {};
-  const state = requireField(errors, body, "state", "Provider state", 40);
-
-  if (state && !PROVIDER_STATES.includes(state)) {
-    errors.state = "Choose a valid provider state.";
-  }
-
-  return {
-    errors,
-    value: { state }
-  };
 }
 
 function validateCategory(body) {
@@ -337,12 +246,9 @@ function hasErrors(errors) {
 module.exports = {
   hasErrors,
   serviceData,
-  validateAssignment,
   validateCategory,
   validateLogin,
   validateModeration,
-  validateProviderRegistration,
-  validateProviderState,
   validateRegistration,
   validateRequest,
   validateReview,

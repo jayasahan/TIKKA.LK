@@ -2,7 +2,7 @@
 
 TIKKA is a Sri Lankan handyman and skilled-services outsourcing platform.
 
-The current MVP connects customers, service providers, and TIKKA operators through a managed service workflow.
+The current MVP is a managed operations platform for customers and TIKKA staff. Customers submit service requests, and TIKKA operations schedules jobs and assigns internal workers or teams.
 
 ## Repository Layout
 
@@ -31,23 +31,49 @@ Local environment configuration can be placed in a root `.env` file based on `.e
 
 - Frontend: vanilla HTML, CSS, and browser JavaScript served by the platform app.
 - Backend: Node.js HTTP server in `apps/platform/server.js`.
-- Data: JSON-file prototype storage under `apps/platform/storage/`.
+- Authenticated actors: Customer and TIKKA Admin / Operations.
+- Operational entity: Worker. Workers are internal records managed manually by TIKKA operations and do not register, log in, or hold passwords.
+- Data: JSON-file prototype storage under `apps/platform/storage/`, with PostgreSQL migrations and adapter available for production migration work.
 - Configuration: root `.env` loaded with `dotenv`; `.env.example` documents safe placeholders.
 - Package management: npm workspaces with the deployable platform app in `apps/platform/`.
 
+## Production Deployment
 
+Railway should run the repository root commands:
 
+```powershell
+cmd /c npm install
+cmd /c npm run build
+cmd /c npm start
+```
 
+Required production environment variables:
 
-example account
+- `NODE_ENV=production`
+- `TIKKA_STORAGE_DRIVER=postgres`
+- `DATABASE_URL`
+- `TIKKA_ADMIN_EMAIL`
+- `TIKKA_ADMIN_PASSWORD`
+- `PGSSLMODE=require` when the managed PostgreSQL provider requires SSL
+- `TIKKA_LOGIN_LIMIT_WINDOW_MS=900000`
+- `TIKKA_LOGIN_LIMIT_MAX_FAILURES=5`
+- `PORT` if the hosting platform does not inject one automatically
 
-user
-0706902135
-user@gmail.com
-12345678
+Before first production startup, run the database setup against the production database:
 
+```powershell
+cmd /c npm run db:migrate
+cmd /c npm run db:seed
+```
 
-provider
-0706902137
-provider@gmail.com
-12345678
+The seed command imports service categories idempotently. It does not create fake customers, workers, or admins.
+
+The application exposes a minimal health endpoint:
+
+```text
+GET /health
+```
+
+It returns only `{ "status": "ok" }` and does not expose database details or secrets.
+
+Login protection is in-memory for the single-instance MVP. The default policy allows five failed attempts per IP bucket and per normalized account identifier within fifteen minutes. Authenticated state-changing customer/admin requests require a session-bound CSRF token sent in the `X-CSRF-Token` header.

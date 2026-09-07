@@ -7,49 +7,6 @@ const seedServices = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "..", "data", "services.json"), "utf8")
 );
 
-const defaultProviders = [
-  {
-    id: "provider-sunil",
-    name: "Sunil Perera",
-    phone: "+94770000001",
-    email: "sunil.provider@example.com",
-    passwordHash: null,
-    profileImage: "public/brand/tikka-logo.jpg",
-    profilePhoto: "public/brand/tikka-logo.jpg",
-    skills: ["Repairs", "Handyman", "Furniture assembly"],
-    services: ["Repairs", "Handyman"],
-    serviceArea: "Colombo and suburbs",
-    description: "Experienced repair and handyman support for everyday jobs.",
-    experienceYears: 8,
-    qualifications: "General maintenance training",
-    state: "APPROVED",
-    verificationStatus: "Approved",
-    rating: 4.7,
-    completedJobs: 0,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: "provider-nadeesha",
-    name: "Nadeesha Fernando",
-    phone: "+94770000002",
-    email: "nadeesha.provider@example.com",
-    passwordHash: null,
-    profileImage: "public/brand/tikka-logo.jpg",
-    profilePhoto: "public/brand/tikka-logo.jpg",
-    skills: ["Cleaning", "Maintenance"],
-    services: ["Cleaning"],
-    serviceArea: "Greater Colombo",
-    description: "Cleaning and maintenance provider for homes and offices.",
-    experienceYears: 5,
-    qualifications: "Cleaning operations experience",
-    state: "APPROVED",
-    verificationStatus: "Approved",
-    rating: 4.8,
-    completedJobs: 0,
-    createdAt: new Date().toISOString()
-  }
-];
-
 function seedCategories() {
   return seedServices.map((service) => ({
     id: createId("category"),
@@ -68,7 +25,7 @@ function createEmptyDatabase() {
     customers: [],
     requests: [],
     reviews: [],
-    providers: defaultProviders,
+    providers: [],
     workers: [],
     admins: [],
     categories: seedCategories()
@@ -85,8 +42,8 @@ function normalizeDatabase(database) {
   if (!Array.isArray(database.reviews)) {
     database.reviews = [];
   }
-  if (!Array.isArray(database.providers) || database.providers.length === 0) {
-    database.providers = defaultProviders;
+  if (!Array.isArray(database.providers)) {
+    database.providers = [];
   }
   if (!Array.isArray(database.workers)) {
     database.workers = [];

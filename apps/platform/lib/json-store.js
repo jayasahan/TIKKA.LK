@@ -1,12 +1,5 @@
 const { createId, createRequestReference, createStore } = require("./db");
 
-function verificationStatus(state = "REGISTERED") {
-  return state
-    .toLowerCase()
-    .replaceAll("_", " ")
-    .replace(/^\w/, (character) => character.toUpperCase());
-}
-
 function duplicateError(field, message) {
   const error = new Error(message);
   error.code = "DUPLICATE";
@@ -186,48 +179,6 @@ class JsonStore {
     return this.store.read().customers;
   }
 
-  async createProvider(value) {
-    return this.store.update((database) => {
-      if (database.providers.some((provider) => provider.email === value.email)) {
-        throw duplicateError("email", "A provider account already exists for this email.");
-      }
-      const provider = {
-        id: createId("provider"),
-        name: value.name,
-        phone: value.phone,
-        email: value.email,
-        passwordHash: value.passwordHash,
-        profileImage: value.profilePhoto || value.profileImage,
-        profilePhoto: value.profilePhoto || value.profileImage,
-        skills: value.skills,
-        services: value.services,
-        serviceArea: value.serviceArea,
-        description: value.description,
-        experienceYears: value.experienceYears,
-        qualifications: value.qualifications,
-        state: "REGISTERED",
-        verificationStatus: "Registered",
-        rating: null,
-        completedJobs: 0,
-        createdAt: new Date().toISOString()
-      };
-      database.providers.push(provider);
-      return provider;
-    });
-  }
-
-  async findProviderByEmail(email) {
-    return this.store.read().providers.find((item) => item.email === email) || null;
-  }
-
-  async findProviderById(id) {
-    return this.store.read().providers.find((item) => item.id === id) || null;
-  }
-
-  async listProviders() {
-    return this.store.read().providers;
-  }
-
   async createWorker(value) {
     return this.store.update((database) => {
       if (!Array.isArray(database.workers)) database.workers = [];
@@ -293,42 +244,6 @@ class JsonStore {
     });
   }
 
-  async submitProviderVerification(providerId) {
-    return this.store.update((database) => {
-      const provider = database.providers.find((item) => item.id === providerId);
-      if (!provider) {
-        throw notFoundError("Provider not found.");
-      }
-      if (provider.state !== "REGISTERED") {
-        throw conflictError("Verification has already been submitted.", provider.state);
-      }
-      provider.state = "PENDING_VERIFICATION";
-      provider.verificationStatus = "Pending verification";
-      provider.verificationSubmittedAt = new Date().toISOString();
-      return provider;
-    });
-  }
-
-  async updateProviderState(providerId, state, adminId) {
-    return this.store.update((database) => {
-      const provider = database.providers.find((item) => item.id === providerId);
-      if (!provider) {
-        throw notFoundError("Provider not found.");
-      }
-      provider.state = state;
-      provider.verificationStatus = verificationStatus(state);
-      provider.reviewedAt = new Date().toISOString();
-      provider.reviewedByAdminId = adminId;
-      if (state === "DISABLED") {
-        provider.disabledAt = provider.reviewedAt;
-      }
-      if (state === "APPROVED") {
-        provider.disabledAt = null;
-      }
-      return provider;
-    });
-  }
-
   async createRequest(value) {
     return this.store.update((database) => {
       const service = (database.categories || []).find((item) => item.name === value.service);
@@ -378,28 +293,6 @@ class JsonStore {
     return this.store.read().requests.find((item) => item.id === id && item.customerId === customerId) || null;
   }
 
-  async assignProvider(requestId, providerId, scheduledAt, adminId) {
-    return this.store.update((database) => {
-      const serviceRequest = database.requests.find((item) => item.id === requestId);
-      const provider = database.providers.find((item) => item.id === providerId);
-      if (!serviceRequest) {
-        throw notFoundError("Request not found.");
-      }
-      if (!provider || provider.state !== "APPROVED") {
-        throw conflictError("Only approved providers can be assigned jobs.");
-      }
-      if (!["NEW", "REVIEWING", "SCHEDULED"].includes(serviceRequest.status)) {
-        throw conflictError("This request cannot be assigned from its current status.", serviceRequest.status);
-      }
-      serviceRequest.providerId = providerId;
-      serviceRequest.scheduledAt = scheduledAt || null;
-      serviceRequest.status = "ASSIGNED";
-      serviceRequest.assignedByAdminId = adminId;
-      serviceRequest.assignedAt = new Date().toISOString();
-      return serviceRequest;
-    });
-  }
-
   async updateRequestStatus(requestId, status, adminId) {
     return this.store.update((database) => {
       const serviceRequest = database.requests.find((item) => item.id === requestId);
@@ -427,38 +320,6 @@ class JsonStore {
     });
   }
 
-  async listProviderJobs(providerId) {
-    return this.store.read().requests.filter((item) => item.providerId === providerId);
-  }
-
-  async providerJobAction(requestId, providerId, action) {
-    return this.store.update((database) => {
-      const job = database.requests.find((item) => item.id === requestId && item.providerId === providerId);
-      if (!job) {
-        throw notFoundError("Assigned job not found.");
-      }
-      const transitions = {
-        accept: ["ASSIGNED", "ACCEPTED"],
-        decline: ["ASSIGNED", "REJECTED"],
-        start: ["ACCEPTED", "IN_PROGRESS"],
-        complete: ["IN_PROGRESS", "COMPLETED"]
-      };
-      const [from, to] = transitions[action] || [];
-      if (!from || job.status !== from) {
-        throw conflictError("Invalid job transition for this provider.", job.status);
-      }
-      job.status = to;
-      if (to === "COMPLETED") {
-        const provider = database.providers.find((item) => item.id === providerId);
-        if (provider) {
-          provider.completedJobs = (provider.completedJobs || 0) + 1;
-        }
-        job.completedAt = new Date().toISOString();
-      }
-      return job;
-    });
-  }
-
   async createReview(value) {
     return this.store.update((database) => {
       const serviceRequest = database.requests.find(
@@ -474,7 +335,8 @@ class JsonStore {
         id: createId("review"),
         requestId: serviceRequest.id,
         customerId: value.customerId,
-        providerId: serviceRequest.providerId,
+        providerId: serviceRequest.providerId || null,
+        workerId: serviceRequest.assignedWorkerId || null,
         rating: value.rating,
         comment: value.comment,
         submittedAt: new Date().toISOString(),
@@ -519,10 +381,10 @@ class JsonStore {
     const requests = database.requests || [];
     return {
       totalCustomers: database.customers.length,
-      totalProviders: database.providers.length,
-      pendingProviderApprovals: database.providers.filter((item) => item.state === "PENDING_VERIFICATION").length,
+      totalWorkers: (database.workers || []).length,
+      activeWorkers: (database.workers || []).filter((item) => item.active !== false).length,
       newJobRequests: requests.filter((item) => item.status === "NEW").length,
-      activeJobs: requests.filter((item) => ["REVIEWING", "SCHEDULED", "ASSIGNED", "ACCEPTED", "IN_PROGRESS"].includes(item.status)).length,
+      activeJobs: requests.filter((item) => ["REVIEWING", "SCHEDULED", "ASSIGNED", "IN_PROGRESS"].includes(item.status)).length,
       completedJobs: requests.filter((item) => ["COMPLETED", "CONFIRMED"].includes(item.status)).length,
       cancelledJobs: requests.filter((item) => item.status === "CANCELLED").length
     };

@@ -6,7 +6,8 @@ const state = {
   reviews: [],
   categories: [],
   selectedJobId: null,
-  selectedWorkerId: null
+  selectedWorkerId: null,
+  csrfToken: null
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -30,9 +31,15 @@ function errors(error) {
 }
 
 async function api(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(state.csrfToken && !["GET", "HEAD"].includes(method) ? { "X-CSRF-Token": state.csrfToken } : {}),
+    ...(options.headers || {})
+  };
   const response = await fetch(path, {
     credentials: "same-origin",
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+    headers,
     ...options
   });
   const payload = await response.json();
@@ -41,6 +48,9 @@ async function api(path, options = {}) {
     error.payload = payload;
     error.status = response.status;
     throw error;
+  }
+  if (payload.csrfToken) {
+    state.csrfToken = payload.csrfToken;
   }
   return payload;
 }
@@ -445,6 +455,7 @@ async function bootstrap() {
   try {
     const session = await api("/api/admin/me");
     $("[data-admin-name]").textContent = session.admin.name;
+    state.csrfToken = session.csrfToken || null;
     await loadAll();
   } catch (error) {
     if (error.status === 401 || error.status === 403) {

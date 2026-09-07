@@ -2,7 +2,8 @@ const { createJsonStore } = require("./json-store");
 const { createPostgresStore } = require("./postgres-store");
 
 function createStorage(options = {}) {
-  const driver = (options.driver || process.env.TIKKA_STORAGE_DRIVER || "json").trim().toLowerCase();
+  const defaultDriver = process.env.NODE_ENV === "production" ? "postgres" : "json";
+  const driver = (options.driver || process.env.TIKKA_STORAGE_DRIVER || defaultDriver).trim().toLowerCase();
 
   if (driver === "json") {
     return createJsonStore({ dbPath: options.dbPath });

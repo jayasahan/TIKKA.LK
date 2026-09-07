@@ -15,10 +15,8 @@ const { closePool, query } = require("../lib/postgres");
 
 const suffix = `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 const customerEmail = `pg.customer.${suffix}@example.com`;
-const providerEmail = `pg.provider.${suffix}@example.com`;
 const created = {
   customerId: null,
-  providerId: null,
   requestIds: [],
   workerId: null,
   reviewId: null
@@ -45,11 +43,6 @@ async function cleanup() {
     await query("DELETE FROM worker_services WHERE worker_id = $1", [created.workerId]);
     await query("DELETE FROM worker_skills WHERE worker_id = $1", [created.workerId]);
     await query("DELETE FROM workers WHERE id = $1", [created.workerId]);
-  }
-  if (created.providerId) {
-    await query("DELETE FROM provider_services WHERE provider_id = $1", [created.providerId]);
-    await query("DELETE FROM provider_skills WHERE provider_id = $1", [created.providerId]);
-    await query("DELETE FROM providers WHERE id = $1", [created.providerId]);
   }
   if (created.customerId) {
     await query("DELETE FROM customers WHERE id = $1", [created.customerId]);
@@ -82,27 +75,6 @@ async function run() {
   created.customerId = customer.id;
   assert(customer.email === customerEmail, "customer create/read shape mismatch");
   assert((await store.findCustomerByEmail(customerEmail)).id === customer.id, "customer email lookup failed");
-
-  const provider = await store.createProvider({
-    name: "PG Test Provider",
-    phone: "+94771111111",
-    email: providerEmail,
-    passwordHash: "salt:hash",
-    profileImage: "provider.jpg",
-    skills: ["Cleaning"],
-    services: ["Cleaning"],
-    serviceArea: "Colombo",
-    description: "PostgreSQL adapter test provider.",
-    experienceYears: 3,
-    qualifications: "Adapter test qualification"
-  });
-  created.providerId = provider.id;
-  assert(provider.skills.includes("Cleaning"), "provider skills were not persisted");
-  assert(provider.services.includes("Cleaning"), "provider services were not persisted");
-
-  await store.submitProviderVerification(provider.id);
-  const approvedProvider = await store.updateProviderState(provider.id, "APPROVED", "admin_test");
-  assert(approvedProvider.state === "APPROVED", "provider state update failed");
 
   const request = await store.createRequest({
     customerId: customer.id,
@@ -139,38 +111,19 @@ async function run() {
   assert(workerAssigned.status === "ASSIGNED", "worker assignment did not set ASSIGNED");
   assert(workerAssigned.assignedWorkerId === worker.id, "worker assignment was not persisted");
 
-  const providerRequest = await store.createRequest({
-    customerId: customer.id,
-    service: "Cleaning",
-    title: "PG adapter provider request",
-    description: "Verify legacy provider compatibility.",
-    customerName: "PG Test Customer",
-    phone: "+94770000000",
-    email: customerEmail,
-    address: "Colombo",
-    preferredDate: "2026-09-08",
-    preferredTime: "11:30",
-    photos: []
-  });
-  created.requestIds.push(providerRequest.id);
-
-  await store.assignProvider(providerRequest.id, provider.id, new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(), "admin_test");
-  await store.providerJobAction(providerRequest.id, provider.id, "accept");
-  await store.providerJobAction(providerRequest.id, provider.id, "start");
-  const completed = await store.providerJobAction(providerRequest.id, provider.id, "complete");
-  assert(completed.status === "COMPLETED", "provider completion failed");
-  assert((await store.findProviderById(provider.id)).completedJobs === 1, "completed_jobs aggregate was not updated");
-
-  await store.confirmRequest(providerRequest.id, customer.id);
+  await store.updateRequestStatus(request.id, "IN_PROGRESS", "admin_test");
+  const completed = await store.updateRequestStatus(request.id, "COMPLETED", "admin_test");
+  assert(completed.status === "COMPLETED", "admin completion failed");
+  await store.confirmRequest(request.id, customer.id);
   const review = await store.createReview({
-    requestId: providerRequest.id,
+    requestId: request.id,
     customerId: customer.id,
     rating: 5,
     comment: "Adapter test review."
   });
   created.reviewId = review.id;
   assert(review.rating === 5, "review create failed");
-  assert((await store.findProviderById(provider.id)).rating === 5, "provider rating aggregate was not updated");
+  assert(review.workerId === worker.id, "review should be attributed to assigned worker");
 
   const moderated = await store.moderateReview(review.id, "hide", "adapter test", "admin_test");
   assert(moderated.hidden === true, "review moderation failed");

@@ -3,39 +3,33 @@ require("dotenv").config({ path: require("node:path").resolve(__dirname, "..", "
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const crypto = require("node:crypto");
 const { URL } = require("node:url");
+const { closePool } = require("./lib/postgres");
 const {
   adminSessionCookie,
   clearAdminSessionCookie,
   clearSessionCookie,
-  clearProviderSessionCookie,
   createAdminSession,
-  createProviderSession,
   createSession,
   destroySession,
   getAdminSession,
-  getProviderSession,
   getSession,
   hashPassword,
-  providerSessionCookie,
   sessionCookie,
   verifyPassword
 } = require("./lib/auth");
 const {
   CUSTOMER_CONFIRMABLE_STATUS,
   CUSTOMER_REVIEWABLE_STATUS,
-  OPERATOR_TRANSITIONS,
-  PROVIDER_STATE_TRANSITIONS
+  OPERATOR_TRANSITIONS
 } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
 const {
   hasErrors,
-  validateAssignment,
   validateCategory,
   validateLogin,
   validateModeration,
-  validateProviderRegistration,
-  validateProviderState,
   validateRegistration,
   validateRequest,
   validateReview,
@@ -46,6 +40,18 @@ const {
 const publicRoot = path.resolve(__dirname);
 const protectedAdminAssets = new Set(["/admin.html", "/admin.js"]);
 let adminConfigWarningShown = false;
+
+const loginLimitWindowMs = Number(process.env.TIKKA_LOGIN_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+const loginLimitMaxFailures = Number(process.env.TIKKA_LOGIN_LIMIT_MAX_FAILURES || 5);
+// TODO: Move rate-limit state to shared storage before running multiple app instances.
+const loginAttempts = new Map();
+let lastLoginAttemptCleanup = 0;
+
+const securityHeaders = {
+  "X-Content-Type-Options": "nosniff",
+  "Referrer-Policy": "strict-origin-when-cross-origin",
+  "X-Frame-Options": "SAMEORIGIN"
+};
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -60,10 +66,19 @@ const mimeTypes = {
 
 function sendJson(response, status, payload, headers = {}) {
   response.writeHead(status, {
+    ...securityHeaders,
     "Content-Type": "application/json; charset=utf-8",
     ...headers
   });
   response.end(JSON.stringify(payload));
+}
+
+function sendText(response, status, text) {
+  response.writeHead(status, {
+    ...securityHeaders,
+    "Content-Type": "text/plain; charset=utf-8"
+  });
+  response.end(text);
 }
 
 function readJsonBody(request) {
@@ -90,6 +105,87 @@ function readJsonBody(request) {
   });
 }
 
+function clientIp(request) {
+  const forwardedFor = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwardedFor || request.socket.remoteAddress || "unknown";
+}
+
+function normalizeIdentifier(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function loginAttemptKeys(request, identifier, scope) {
+  const ip = clientIp(request);
+  const normalized = normalizeIdentifier(identifier) || "unknown";
+  return [`${scope}:ip:${ip}`, `${scope}:account:${normalized}`];
+}
+
+function cleanupLoginAttempts(now = Date.now()) {
+  if (now - lastLoginAttemptCleanup < loginLimitWindowMs) {
+    return;
+  }
+  for (const [key, entry] of loginAttempts.entries()) {
+    if (entry.resetAt <= now) {
+      loginAttempts.delete(key);
+    }
+  }
+  lastLoginAttemptCleanup = now;
+}
+
+function checkLoginRateLimit(request, identifier, scope) {
+  cleanupLoginAttempts();
+  const keys = loginAttemptKeys(request, identifier, scope);
+  const now = Date.now();
+  if (keys.some((key) => {
+    const entry = loginAttempts.get(key);
+    return entry && entry.count >= loginLimitMaxFailures && entry.resetAt > now;
+  })) {
+    return { limited: true, keys };
+  }
+  return { limited: false, keys };
+}
+
+function recordLoginFailure(keys) {
+  const now = Date.now();
+  for (const key of keys) {
+    const entry = loginAttempts.get(key);
+    if (!entry || entry.resetAt <= now) {
+      loginAttempts.set(key, { count: 1, resetAt: now + loginLimitWindowMs });
+    } else {
+      entry.count += 1;
+    }
+  }
+}
+
+function resetLoginFailures(keys) {
+  for (const key of keys) {
+    loginAttempts.delete(key);
+  }
+}
+
+function sendRateLimited(response) {
+  sendJson(response, 429, { error: "Too many attempts. Please try again later." });
+}
+
+function isUnsafeMethod(method) {
+  return ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+}
+
+function hasValidCsrf(request, session) {
+  if (!isUnsafeMethod(request.method)) {
+    return true;
+  }
+  const token = String(request.headers["x-csrf-token"] || "");
+  if (!session || !session.csrfToken || !token || token.length !== session.csrfToken.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(Buffer.from(token), Buffer.from(session.csrfToken));
+}
+
+function sendCsrfFailure(response) {
+  sendJson(response, 403, { error: "Security check failed. Please refresh and try again." });
+}
+
 function sanitizeCustomer(customer) {
   if (!customer) {
     return null;
@@ -100,6 +196,13 @@ function sanitizeCustomer(customer) {
     phone: customer.phone,
     email: customer.email,
     createdAt: customer.createdAt || null
+  };
+}
+
+function exposeCustomerSession(customer, session) {
+  return {
+    customer: sanitizeCustomer(customer),
+    csrfToken: session.csrfToken
   };
 }
 
@@ -115,39 +218,10 @@ function sanitizeAdmin(admin) {
   };
 }
 
-function sanitizeProvider(provider) {
-  if (!provider) {
-    return null;
-  }
+function exposeAdminSession(admin, session) {
   return {
-    id: provider.id,
-    name: provider.name,
-    profilePhoto: provider.profilePhoto || provider.profileImage,
-    skills: provider.skills,
-    services: provider.services || [],
-    serviceArea: provider.serviceArea,
-    description: provider.description,
-    experienceYears: provider.experienceYears,
-    qualifications: provider.qualifications,
-    state: provider.state || "REGISTERED",
-    verificationStatus: provider.verificationStatus,
-    rating: provider.rating || null,
-    completedJobs: provider.completedJobs || 0
-  };
-}
-
-function sanitizeAdminProvider(provider) {
-  if (!provider) {
-    return null;
-  }
-  return {
-    ...sanitizeProvider(provider),
-    phone: provider.phone,
-    email: provider.email,
-    verificationSubmittedAt: provider.verificationSubmittedAt || null,
-    reviewedAt: provider.reviewedAt || null,
-    reviewedByAdminId: provider.reviewedByAdminId || null,
-    disabledAt: provider.disabledAt || null
+    admin: sanitizeAdmin(admin),
+    csrfToken: session.csrfToken
   };
 }
 
@@ -159,21 +233,6 @@ function sanitizeWorker(worker) {
     availabilityStatus: worker.availabilityStatus, active: worker.active,
     rating: worker.rating || null, completedJobs: worker.completedJobs || 0,
     createdAt: worker.createdAt || null, updatedAt: worker.updatedAt || null
-  };
-}
-
-function exposeProvider(provider) {
-  if (!provider) {
-    return null;
-  }
-  return {
-    id: provider.id,
-    name: provider.name,
-    profileImage: provider.profileImage,
-    skills: provider.skills,
-    serviceArea: provider.serviceArea,
-    verificationStatus: provider.verificationStatus,
-    rating: provider.rating
   };
 }
 
@@ -189,7 +248,6 @@ function publicReview(review) {
 }
 
 function exposeRequest(request, database) {
-  const provider = (database.providers || []).find((item) => item.id === request.providerId);
   const worker = (database.workers || []).find((item) => item.id === request.assignedWorkerId);
   const review = (database.reviews || []).find((item) => item.requestId === request.id);
 
@@ -205,14 +263,12 @@ function exposeRequest(request, database) {
     preferredDate: request.preferredDate,
     preferredTime: request.preferredTime,
     address: request.address || null,
-    assignedProvider: exposeProvider(provider),
     assignedWorker: sanitizeWorker(worker),
     review: publicReview(review)
   };
 }
 
 function exposeAdminRequest(request, database) {
-  const provider = (database.providers || []).find((item) => item.id === request.providerId);
   const admin = (database.admins || []).find((item) => item.id === request.assignedByAdminId);
   const customer = (database.customers || []).find((item) => item.id === request.customerId);
   const review = (database.reviews || []).find((item) => item.requestId === request.id);
@@ -227,7 +283,6 @@ function exposeAdminRequest(request, database) {
     address: request.address,
     photos: request.photos || [],
     assignment: {
-      provider: sanitizeAdminProvider(provider),
       worker: sanitizeWorker((database.workers || []).find((item) => item.id === request.assignedWorkerId)),
       assignedBy: sanitizeAdmin(admin),
       assignedAt: request.assignedAt || null,
@@ -244,7 +299,7 @@ function exposeAdminReview(review, database) {
     requestId: review.requestId,
     reference: request ? request.reference : null,
     customerId: review.customerId,
-    providerId: review.providerId,
+    workerId: review.workerId || null,
     rating: review.rating,
     comment: review.comment,
     submittedAt: review.submittedAt,
@@ -253,49 +308,25 @@ function exposeAdminReview(review, database) {
   };
 }
 
-function exposeProviderJob(request) {
-  return {
-    id: request.id,
-    reference: request.reference,
-    service: request.service,
-    title: request.title,
-    description: request.description,
-    address: request.address,
-    preferredDate: request.preferredDate,
-    preferredTime: request.preferredTime,
-    scheduledAt: request.scheduledAt || null,
-    status: request.status,
-    customerContact: {
-      name: request.customerName,
-      phone: request.phone,
-      email: request.email
-    }
-  };
-}
-
 async function exposeRequestWithStore(request, store) {
-  const [provider, worker, review] = await Promise.all([
-    request.providerId ? store.findProviderById(request.providerId) : null,
+  const [worker, review] = await Promise.all([
     request.assignedWorkerId ? store.findWorkerById(request.assignedWorkerId) : null,
     store.findReviewByRequestId(request.id)
   ]);
   return exposeRequest(request, {
-    providers: provider ? [provider] : [],
     workers: worker ? [worker] : [],
     reviews: review ? [review] : []
   });
 }
 
 async function exposeAdminRequestWithStore(request, store) {
-  const [provider, worker, admin, customer, review] = await Promise.all([
-    request.providerId ? store.findProviderById(request.providerId) : null,
+  const [worker, admin, customer, review] = await Promise.all([
     request.assignedWorkerId ? store.findWorkerById(request.assignedWorkerId) : null,
     request.assignedByAdminId ? store.findAdminById(request.assignedByAdminId) : null,
     request.customerId ? store.findCustomerById(request.customerId) : null,
     store.findReviewByRequestId(request.id)
   ]);
   return exposeAdminRequest(request, {
-    providers: provider ? [provider] : [],
     workers: worker ? [worker] : [],
     admins: admin ? [admin] : [],
     customers: customer ? [customer] : [],
@@ -363,6 +394,11 @@ async function requireCustomer(request, response, store) {
     return null;
   }
 
+  if (!hasValidCsrf(request, session)) {
+    sendCsrfFailure(response);
+    return null;
+  }
+
   const customer = await store.findCustomerById(session.customerId);
   if (!customer) {
     sendJson(response, 401, { error: "Please log in to continue." });
@@ -370,22 +406,6 @@ async function requireCustomer(request, response, store) {
   }
 
   return { customer, session };
-}
-
-async function requireProvider(request, response, store) {
-  const session = getProviderSession(request);
-  if (!session) {
-    sendJson(response, 401, { error: "Please log in as a service provider." });
-    return null;
-  }
-
-  const provider = await store.findProviderById(session.providerId);
-  if (!provider) {
-    sendJson(response, 401, { error: "Please log in as a service provider." });
-    return null;
-  }
-
-  return { provider, session };
 }
 
 async function requireAdmin(request, response, store) {
@@ -397,6 +417,11 @@ async function requireAdmin(request, response, store) {
   const session = getAdminSession(request);
   if (!session) {
     sendJson(response, 401, { error: "Please log in as an admin." });
+    return null;
+  }
+
+  if (!hasValidCsrf(request, session)) {
+    sendCsrfFailure(response);
     return null;
   }
 
@@ -431,7 +456,7 @@ function matchesSearch(request, query) {
 
 async function handleApi(request, response, store, url) {
   try {
-    // TODO: Add CSRF protection and login rate limiting before public launch.
+    // TODO: Add persistent sessions and stricter request auditing before scaling beyond one instance.
     if (request.method === "GET" && url.pathname === "/api/services") {
       const categories = await store.listCategories({ enabledOnly: true });
       sendJson(response, 200, { services: categories.map(exposeCategory) });
@@ -440,8 +465,14 @@ async function handleApi(request, response, store, url) {
 
     if (request.method === "POST" && url.pathname === "/api/auth/register") {
       const body = await readJsonBody(request);
+      const limit = checkLoginRateLimit(request, body.email, "customer-register");
+      if (limit.limited) {
+        sendRateLimited(response);
+        return;
+      }
       const { errors, value } = validateRegistration(body);
       if (hasErrors(errors)) {
+        recordLoginFailure(limit.keys);
         sendJson(response, 400, { errors });
         return;
       }
@@ -458,12 +489,15 @@ async function handleApi(request, response, store, url) {
         if (error.code !== "DUPLICATE") {
           throw error;
         }
+        recordLoginFailure(limit.keys);
         sendJson(response, 409, { errors: { email: "An account already exists for this email." } });
         return;
       }
 
       const sessionId = createSession(customer.id);
-      sendJson(response, 201, { customer: sanitizeCustomer(customer) }, {
+      const session = getSession({ headers: { cookie: `tikka_session=${sessionId}` } });
+      resetLoginFailures(limit.keys);
+      sendJson(response, 201, exposeCustomerSession(customer, session), {
         "Set-Cookie": sessionCookie(sessionId)
       });
       return;
@@ -471,20 +505,29 @@ async function handleApi(request, response, store, url) {
 
     if (request.method === "POST" && url.pathname === "/api/auth/login") {
       const body = await readJsonBody(request);
+      const limit = checkLoginRateLimit(request, body.email, "customer-login");
+      if (limit.limited) {
+        sendRateLimited(response);
+        return;
+      }
       const { errors, value } = validateLogin(body);
       if (hasErrors(errors)) {
+        recordLoginFailure(limit.keys);
         sendJson(response, 400, { errors });
         return;
       }
 
       const customer = await store.findCustomerByEmail(value.email);
       if (!customer || !verifyPassword(value.password, customer.passwordHash)) {
+        recordLoginFailure(limit.keys);
         sendJson(response, 401, { error: "Email or password is incorrect." });
         return;
       }
 
       const sessionId = createSession(customer.id);
-      sendJson(response, 200, { customer: sanitizeCustomer(customer) }, {
+      const session = getSession({ headers: { cookie: `tikka_session=${sessionId}` } });
+      resetLoginFailures(limit.keys);
+      sendJson(response, 200, exposeCustomerSession(customer, session), {
         "Set-Cookie": sessionCookie(sessionId)
       });
       return;
@@ -492,6 +535,10 @@ async function handleApi(request, response, store, url) {
 
     if (request.method === "POST" && url.pathname === "/api/auth/logout") {
       const session = getSession(request);
+      if (session && !hasValidCsrf(request, session)) {
+        sendCsrfFailure(response);
+        return;
+      }
       if (session) {
         destroySession(session.id);
       }
@@ -507,24 +554,34 @@ async function handleApi(request, response, store, url) {
       }
 
       const body = await readJsonBody(request);
+      const limit = checkLoginRateLimit(request, body.email, "admin-login");
+      if (limit.limited) {
+        sendRateLimited(response);
+        return;
+      }
       const { errors, value } = validateLogin(body);
       if (hasErrors(errors)) {
+        recordLoginFailure(limit.keys);
         sendJson(response, 400, { errors });
         return;
       }
 
       const admin = await store.findAdminByEmail(credentials.email);
       if (value.email !== credentials.email) {
+        recordLoginFailure(limit.keys);
         sendJson(response, 401, { error: "Email or password is incorrect." });
         return;
       }
       if (!admin || !verifyPassword(value.password, admin.passwordHash)) {
+        recordLoginFailure(limit.keys);
         sendJson(response, 401, { error: "Email or password is incorrect." });
         return;
       }
 
       const sessionId = createAdminSession(admin.id);
-      sendJson(response, 200, { admin: sanitizeAdmin(admin) }, {
+      const session = getAdminSession({ headers: { cookie: `tikka_admin_session=${sessionId}` } });
+      resetLoginFailures(limit.keys);
+      sendJson(response, 200, exposeAdminSession(admin, session), {
         "Set-Cookie": adminSessionCookie(sessionId)
       });
       return;
@@ -532,6 +589,10 @@ async function handleApi(request, response, store, url) {
 
     if (request.method === "POST" && url.pathname === "/api/admin/logout") {
       const session = getAdminSession(request);
+      if (session && !hasValidCsrf(request, session)) {
+        sendCsrfFailure(response);
+        return;
+      }
       if (session) {
         destroySession(session.id);
       }
@@ -544,7 +605,7 @@ async function handleApi(request, response, store, url) {
       if (!auth) {
         return;
       }
-      sendJson(response, 200, { admin: sanitizeAdmin(auth.admin) });
+      sendJson(response, 200, exposeAdminSession(auth.admin, auth.session));
       return;
     }
 
@@ -643,32 +704,6 @@ async function handleApi(request, response, store, url) {
         if (error.code === "CONFLICT") { sendJson(response, 409, { error: error.message }); return; }
         throw error;
       }
-      return;
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/admin/providers") {
-      const auth = await requireAdmin(request, response, store);
-      if (!auth) {
-        return;
-      }
-      sendJson(response, 200, {
-        providers: (await store.listProviders()).map(sanitizeAdminProvider)
-      });
-      return;
-    }
-
-    const adminProviderMatch = url.pathname.match(/^\/api\/admin\/providers\/([^/]+)$/);
-    if (request.method === "GET" && adminProviderMatch) {
-      const auth = await requireAdmin(request, response, store);
-      if (!auth) {
-        return;
-      }
-      const provider = await store.findProviderById(adminProviderMatch[1]);
-      if (!provider) {
-        sendJson(response, 404, { error: "Provider not found." });
-        return;
-      }
-      sendJson(response, 200, { provider: sanitizeAdminProvider(provider) });
       return;
     }
 
@@ -831,147 +866,12 @@ async function handleApi(request, response, store, url) {
       return;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/providers/register") {
-      const body = await readJsonBody(request);
-      const categories = await store.listCategories();
-      const { errors, value } = validateProviderRegistration(body, categories);
-      if (hasErrors(errors)) {
-        sendJson(response, 400, { errors });
-        return;
-      }
-
-      let provider;
-      try {
-        provider = await store.createProvider({
-          name: value.name,
-          phone: value.phone,
-          email: value.email,
-          passwordHash: hashPassword(value.password),
-          profileImage: value.profilePhoto,
-          profilePhoto: value.profilePhoto,
-          skills: value.skills,
-          services: value.services,
-          serviceArea: value.serviceArea,
-          description: value.description,
-          experienceYears: value.experienceYears,
-          qualifications: value.qualifications
-        });
-      } catch (error) {
-        if (error.code !== "DUPLICATE") {
-          throw error;
-        }
-        sendJson(response, 409, { errors: { email: "A provider account already exists for this email." } });
-        return;
-      }
-
-      const sessionId = createProviderSession(provider.id);
-      sendJson(response, 201, { provider: sanitizeProvider(provider) }, {
-        "Set-Cookie": providerSessionCookie(sessionId)
-      });
-      return;
-    }
-
-    if (request.method === "POST" && url.pathname === "/api/providers/login") {
-      const body = await readJsonBody(request);
-      const { errors, value } = validateLogin(body);
-      if (hasErrors(errors)) {
-        sendJson(response, 400, { errors });
-        return;
-      }
-
-      const provider = await store.findProviderByEmail(value.email);
-      if (!provider || !provider.passwordHash || !verifyPassword(value.password, provider.passwordHash)) {
-        sendJson(response, 401, { error: "Email or password is incorrect." });
-        return;
-      }
-
-      const sessionId = createProviderSession(provider.id);
-      sendJson(response, 200, { provider: sanitizeProvider(provider) }, {
-        "Set-Cookie": providerSessionCookie(sessionId)
-      });
-      return;
-    }
-
-    if (request.method === "POST" && url.pathname === "/api/providers/verification") {
-      const auth = await requireProvider(request, response, store);
-      if (!auth) {
-        return;
-      }
-      let provider;
-      try {
-        provider = await store.submitProviderVerification(auth.provider.id);
-      } catch (error) {
-        if (error.code !== "CONFLICT") {
-          throw error;
-        }
-        sendJson(response, 409, { error: "Verification has already been submitted." });
-        return;
-      }
-
-      sendJson(response, 200, { provider: sanitizeProvider(provider) });
-      return;
-    }
-
-    if (request.method === "POST" && url.pathname === "/api/providers/logout") {
-      const session = getProviderSession(request);
-      if (session) {
-        destroySession(session.id);
-      }
-      sendJson(response, 200, { ok: true }, { "Set-Cookie": clearProviderSessionCookie() });
-      return;
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/providers/me") {
-      const auth = await requireProvider(request, response, store);
-      if (!auth) {
-        return;
-      }
-      sendJson(response, 200, { provider: sanitizeProvider(auth.provider) });
-      return;
-    }
-
-    if (request.method === "GET" && url.pathname === "/api/providers/jobs") {
-      const auth = await requireProvider(request, response, store);
-      if (!auth) {
-        return;
-      }
-      const jobs = (await store.listProviderJobs(auth.provider.id)).map(exposeProviderJob);
-      sendJson(response, 200, { jobs });
-      return;
-    }
-
-    const providerJobMatch = url.pathname.match(/^\/api\/providers\/jobs\/([^/]+)\/(accept|decline|start|complete)$/);
-    if (request.method === "POST" && providerJobMatch) {
-      const auth = await requireProvider(request, response, store);
-      if (!auth) {
-        return;
-      }
-
-      const action = providerJobMatch[2];
-      let job;
-      try {
-        job = await store.providerJobAction(providerJobMatch[1], auth.provider.id, action);
-      } catch (error) {
-        if (error.code === "NOT_FOUND") {
-          sendJson(response, 404, { error: "Assigned job not found." });
-          return;
-        }
-        if (error.code === "CONFLICT") {
-          sendJson(response, 409, { error: "Invalid job transition for this provider." });
-          return;
-        }
-        throw error;
-      }
-      sendJson(response, 200, { job: exposeProviderJob(job) });
-      return;
-    }
-
     if (request.method === "GET" && url.pathname === "/api/auth/me") {
       const auth = await requireCustomer(request, response, store);
       if (!auth) {
         return;
       }
-      sendJson(response, 200, { customer: sanitizeCustomer(auth.customer) });
+      sendJson(response, 200, exposeCustomerSession(auth.customer, auth.session));
       return;
     }
 
@@ -1052,7 +952,7 @@ async function handleApi(request, response, store, url) {
       }
       if (existingRequest.status !== CUSTOMER_CONFIRMABLE_STATUS) {
         sendJson(response, 409, {
-          error: "Completion can only be confirmed after the provider marks the job completed."
+          error: "Completion can only be confirmed after TIKKA marks the job completed."
         });
         return;
       }
@@ -1101,67 +1001,6 @@ async function handleApi(request, response, store, url) {
       return;
     }
 
-    const assignMatch = url.pathname.match(/^\/api\/(?:admin|operator)\/requests\/([^/]+)\/assign$/);
-    if (request.method === "POST" && assignMatch) {
-      const auth = await requireAdmin(request, response, store);
-      if (!auth) {
-        return;
-      }
-      const body = await readJsonBody(request);
-      const currentDatabase = { providers: await store.listProviders() };
-      const { errors, value } = validateAssignment(body, currentDatabase);
-      if (hasErrors(errors)) {
-        sendJson(response, 400, { errors });
-        return;
-      }
-
-      const existingRequest = await store.findRequestById(assignMatch[1]);
-      const provider = await store.findProviderById(value.providerId);
-      if (!existingRequest) {
-        sendJson(response, 404, { error: "Request not found." });
-        return;
-      }
-      if (!provider || provider.state !== "APPROVED") {
-        sendJson(response, 409, { error: "Only approved providers can be assigned jobs." });
-        return;
-      }
-      if (!["NEW", "REVIEWING"].includes(existingRequest.status)) {
-        sendJson(response, 409, { error: "This request cannot be assigned from its current status." });
-        return;
-      }
-      const serviceRequest = await store.assignProvider(assignMatch[1], value.providerId, value.scheduledAt, auth.admin.id);
-      sendJson(response, 200, { request: await exposeAdminRequestWithStore(serviceRequest, store) });
-      return;
-    }
-
-    const providerStateMatch = url.pathname.match(/^\/api\/(?:admin|operator)\/providers\/([^/]+)\/state$/);
-    if (request.method === "POST" && providerStateMatch) {
-      const auth = await requireAdmin(request, response, store);
-      if (!auth) {
-        return;
-      }
-      const body = await readJsonBody(request);
-      const { errors, value } = validateProviderState(body);
-      if (hasErrors(errors)) {
-        sendJson(response, 400, { errors });
-        return;
-      }
-
-      const existingProvider = await store.findProviderById(providerStateMatch[1]);
-      if (!existingProvider) {
-        sendJson(response, 404, { error: "Provider not found." });
-        return;
-      }
-      const allowed = PROVIDER_STATE_TRANSITIONS[existingProvider.state] || [];
-      if (!allowed.includes(value.state)) {
-        sendJson(response, 409, { error: "Invalid provider verification transition." });
-        return;
-      }
-      const provider = await store.updateProviderState(providerStateMatch[1], value.state, auth.admin.id);
-      sendJson(response, 200, { provider: sanitizeAdminProvider(provider) });
-      return;
-    }
-
     const statusMatch = url.pathname.match(/^\/api\/(?:admin|operator)\/requests\/([^/]+)\/status$/);
     if (request.method === "POST" && statusMatch) {
       const auth = await requireAdmin(request, response, store);
@@ -1181,7 +1020,7 @@ async function handleApi(request, response, store, url) {
         return;
       }
       const allowed = OPERATOR_TRANSITIONS[existingRequest.status] || [];
-      if (value.status === "ASSIGNED" && !existingRequest.providerId && !existingRequest.assignedWorkerId) {
+      if (value.status === "ASSIGNED" && !existingRequest.assignedWorkerId) {
         sendJson(response, 409, { error: "Assign a worker before setting ASSIGNED." });
         return;
       }
@@ -1196,6 +1035,7 @@ async function handleApi(request, response, store, url) {
 
     sendJson(response, 404, { error: "API route not found." });
   } catch (error) {
+    console.error(`Request failed: ${request.method} ${url.pathname}: ${error.message}`);
     sendJson(response, 400, { error: error.message || "Request failed." });
   }
 }
@@ -1214,18 +1054,18 @@ async function serveStatic(request, response, url, store) {
   const filePath = path.join(publicRoot, safePath);
 
   if (protectedAdminAssets.has(url.pathname) && !(await hasValidAdminSession(request, store))) {
-    response.writeHead(302, { Location: "/admin-login.html" });
+    response.writeHead(302, { ...securityHeaders, Location: "/admin-login.html" });
     response.end();
     return;
   }
 
   if (!filePath.startsWith(publicRoot) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
-    response.end("Not found");
+    sendText(response, 404, "Not found");
     return;
   }
 
   response.writeHead(200, {
+    ...securityHeaders,
     "Content-Type": mimeTypes[path.extname(filePath)] || "application/octet-stream"
   });
   fs.createReadStream(filePath).pipe(response);
@@ -1237,9 +1077,14 @@ function createApp(options = {}) {
     driver: options.storageDriver
   });
   const ready = ensureConfiguredAdmin(store);
-
-  return http.createServer(async (request, response) => {
+  const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+
+    if (request.method === "GET" && url.pathname === "/health") {
+      sendJson(response, 200, { status: "ok" });
+      return;
+    }
+
     await ready;
     if (url.pathname.startsWith("/api/")) {
       await handleApi(request, response, store, url);
@@ -1247,13 +1092,51 @@ function createApp(options = {}) {
     }
     await serveStatic(request, response, url, store);
   });
+  server.ready = ready;
+  return server;
 }
 
 if (require.main === module) {
   const port = Number(process.env.PORT || 3000);
-  createApp().listen(port, () => {
-    console.log(`TIKKA server running at http://localhost:${port}`);
-  });
+  const mode = process.env.NODE_ENV || "development";
+  const storageDriver = process.env.TIKKA_STORAGE_DRIVER || (mode === "production" ? "postgres" : "json");
+  let server;
+
+  async function shutdown(signal) {
+    console.log(`TIKKA server received ${signal}; shutting down.`);
+    if (server) {
+      server.close(async () => {
+        await closePool();
+        process.exit(0);
+      });
+      return;
+    }
+    await closePool();
+    process.exit(0);
+  }
+
+  try {
+    server = createApp();
+    server.ready
+      .then(() => {
+        server.listen(port, () => {
+          console.log(`TIKKA server started on port ${port}`);
+          console.log(`Mode: ${mode}`);
+          console.log(`Storage driver: ${storageDriver}`);
+        });
+      })
+      .catch(async (error) => {
+        console.error(`TIKKA startup failed: ${error.message}`);
+        await closePool();
+        process.exit(1);
+      });
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
+  } catch (error) {
+    console.error(`TIKKA startup failed: ${error.message}`);
+    closePool().finally(() => process.exit(1));
+  }
 }
 
 module.exports = {

@@ -31,15 +31,7 @@ function createSession(customerId) {
   const sessionId = crypto.randomBytes(24).toString("hex");
   sessions.set(sessionId, {
     customerId,
-    createdAt: new Date().toISOString()
-  });
-  return sessionId;
-}
-
-function createProviderSession(providerId) {
-  const sessionId = crypto.randomBytes(24).toString("hex");
-  sessions.set(sessionId, {
-    providerId,
+    csrfToken: crypto.randomBytes(32).toString("hex"),
     createdAt: new Date().toISOString()
   });
   return sessionId;
@@ -49,6 +41,7 @@ function createAdminSession(adminId) {
   const sessionId = crypto.randomBytes(24).toString("hex");
   sessions.set(sessionId, {
     adminId,
+    csrfToken: crypto.randomBytes(32).toString("hex"),
     createdAt: new Date().toISOString()
   });
   return sessionId;
@@ -63,13 +56,6 @@ function getSession(request) {
   const sessionId = cookies.tikka_session;
   const session = sessionId ? sessions.get(sessionId) : null;
   return session ? { id: sessionId, ...session } : null;
-}
-
-function getProviderSession(request) {
-  const cookies = parseCookies(request.headers.cookie);
-  const sessionId = cookies.tikka_provider_session;
-  const session = sessionId ? sessions.get(sessionId) : null;
-  return session && session.providerId ? { id: sessionId, ...session } : null;
 }
 
 function getAdminSession(request) {
@@ -93,16 +79,8 @@ function sessionCookie(sessionId) {
   return `tikka_session=${encodeURIComponent(sessionId)}; ${cookieAttributes(604800)}`;
 }
 
-function providerSessionCookie(sessionId) {
-  return `tikka_provider_session=${encodeURIComponent(sessionId)}; ${cookieAttributes(604800)}`;
-}
-
 function clearSessionCookie() {
   return `tikka_session=; ${cookieAttributes(0)}`;
-}
-
-function clearProviderSessionCookie() {
-  return `tikka_provider_session=; ${cookieAttributes(0)}`;
 }
 
 function adminSessionCookie(sessionId) {
@@ -121,17 +99,13 @@ module.exports = {
   adminSessionCookie,
   clearAdminSessionCookie,
   clearSessionCookie,
-  clearProviderSessionCookie,
   createAdminSession,
-  createProviderSession,
   createSession,
   destroySession,
   getAdminSession,
   getSession,
-  getProviderSession,
   hashPassword,
   resetSessions,
-  providerSessionCookie,
   sessionCookie,
   verifyPassword
 };

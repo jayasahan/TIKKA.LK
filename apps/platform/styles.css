@@ -122,7 +122,7 @@ a {
 }
 
 .section-heading h2,
-.provider-band h2,
+.service-band h2,
 .request-band h2 {
   margin: 0;
   font-size: clamp(2rem, 5vw, 4.2rem);
@@ -677,7 +677,7 @@ a {
 
 .service-card p,
 .trust-item p,
-.provider-band p,
+.service-band p,
 .site-footer p,
 .site-footer li {
   color: var(--color-muted);
@@ -751,26 +751,26 @@ a {
   padding: var(--space-5);
 }
 
-.provider-band,
+.service-band,
 .request-band {
   background: var(--color-surface);
 }
 
-.provider-band__inner,
+.service-band__inner,
 .request-band__inner {
   display: grid;
   gap: var(--space-5);
   align-items: center;
 }
 
-.provider-band__inner {
+.service-band__inner {
   padding: clamp(2rem, 5vw, 4rem);
   background: var(--color-brand);
   border-radius: var(--radius-lg);
 }
 
-.provider-band .eyebrow,
-.provider-band p {
+.service-band .eyebrow,
+.service-band p {
   color: rgba(0, 0, 0, 0.72);
 }
 
@@ -978,8 +978,7 @@ legend em {
   gap: var(--space-3);
 }
 
-.request-card h3,
-.provider-card h4 {
+.request-card h3 {
   margin: 0;
 }
 
@@ -1018,28 +1017,6 @@ legend em {
 .request-meta dd {
   margin: var(--space-1) 0 0;
   font-weight: 800;
-}
-
-.provider-card {
-  display: grid;
-  grid-template-columns: 72px 1fr;
-  gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border-radius: var(--radius-sm);
-}
-
-.provider-card img {
-  width: 72px;
-  height: 72px;
-  object-fit: cover;
-  border-radius: 50%;
-}
-
-.provider-card p {
-  margin: var(--space-1) 0;
-  color: var(--color-muted);
 }
 
 .review-form {
@@ -1082,23 +1059,8 @@ legend em {
   min-height: 20px;
 }
 
-.provider-card--large {
-  grid-template-columns: 84px 1fr;
-  margin-bottom: var(--space-4);
-}
-
-.provider-card--large img {
-  width: 84px;
-  height: 84px;
-}
-
 .profile-meta {
   margin-bottom: var(--space-4);
-}
-
-.provider-job-grid {
-  display: grid;
-  gap: var(--space-4);
 }
 
 .job-column {
@@ -1183,7 +1145,7 @@ legend em {
     align-items: start;
   }
 
-  .provider-band__inner {
+  .service-band__inner {
     grid-template-columns: 1fr auto;
   }
 
@@ -1206,9 +1168,6 @@ legend em {
     grid-column: 1 / -1;
   }
 
-  .provider-job-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (min-width: 1040px) {
@@ -1216,9 +1175,6 @@ legend em {
     grid-template-columns: 1fr;
   }
 
-  .provider-job-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

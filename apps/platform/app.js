@@ -4,6 +4,7 @@ const state = {
   requests: [],
   selectedRequestId: null,
   filter: "active",
+  csrfToken: null,
   loading: true
 };
 
@@ -48,19 +49,26 @@ const completedStatuses = ["COMPLETED", "CONFIRMED"];
 const closedStatuses = ["CANCELLED", "REJECTED"];
 
 async function api(path, options = {}) {
+  const method = String(options.method || "GET").toUpperCase();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(state.csrfToken && !["GET", "HEAD"].includes(method) ? { "X-CSRF-Token": state.csrfToken } : {}),
+    ...(options.headers || {})
+  };
   const response = await fetch(path, {
     credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
+    headers,
     ...options
   });
   const payload = await response.json();
   if (!response.ok) {
     const error = new Error(payload.error || "Request failed.");
     error.payload = payload;
+    error.status = response.status;
     throw error;
+  }
+  if (payload.csrfToken) {
+    state.csrfToken = payload.csrfToken;
   }
   return payload;
 }
@@ -348,8 +356,10 @@ async function loadCurrentUser() {
   try {
     const sessionPayload = await api("/api/auth/me");
     state.customer = sessionPayload.customer;
+    state.csrfToken = sessionPayload.csrfToken || null;
   } catch (error) {
     state.customer = null;
+    state.csrfToken = null;
   }
 }
 
@@ -451,6 +461,7 @@ function bindEvents() {
           body: JSON.stringify(formValues(elements.authForm))
         });
         state.customer = payload.customer;
+        state.csrfToken = payload.csrfToken || null;
         await loadRequests();
         state.loading = false;
         setAuthenticatedView();
@@ -513,6 +524,7 @@ function bindEvents() {
     elements.logoutButton.addEventListener("click", async () => {
       await api("/api/auth/logout", { method: "POST" });
       state.customer = null;
+      state.csrfToken = null;
       state.requests = [];
       state.selectedRequestId = null;
       state.loading = false;
