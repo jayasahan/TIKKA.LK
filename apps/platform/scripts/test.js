@@ -2,6 +2,7 @@ const fs = require("node:fs");
 const http = require("node:http");
 const os = require("node:os");
 const path = require("node:path");
+const childProcess = require("node:child_process");
 
 process.env.TIKKA_ADMIN_EMAIL = "admin.test@example.com";
 process.env.TIKKA_ADMIN_PASSWORD = "admin-test-password";
@@ -13,6 +14,9 @@ const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const appHtml = fs.readFileSync(path.join(root, "app.html"), "utf8");
 const providerHtml = fs.readFileSync(path.join(root, "provider.html"), "utf8");
+const adminHtml = fs.readFileSync(path.join(root, "admin.html"), "utf8");
+const adminJs = fs.readFileSync(path.join(root, "admin.js"), "utf8");
+const buildJs = fs.readFileSync(path.join(root, "scripts", "build.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const serviceData = JSON.parse(
   fs.readFileSync(path.join(root, "data", "services.json"), "utf8")
@@ -73,8 +77,86 @@ if (!appHtml.includes("data-request-form") || !appHtml.includes("data-request-li
   failed = true;
 }
 
+for (const requiredCustomerMarkup of [
+  "data-dashboard-shell",
+  "data-auth-shell",
+  "data-active-requests",
+  "data-upcoming-requests",
+  "data-request-detail",
+  "data-profile-summary",
+  "Request a Service",
+  "Assigned Technician"
+]) {
+  if (!appHtml.includes(requiredCustomerMarkup)) {
+    console.error(`Customer dashboard is missing: ${requiredCustomerMarkup}`);
+    failed = true;
+  }
+}
+
+for (const requiredCustomerCode of [
+  "loadCurrentUser",
+  "renderDashboard",
+  "renderActiveRequests",
+  "renderRequestHistory",
+  "renderRequestDetails",
+  "submitServiceRequest",
+  "confirmCompletion",
+  "submitReview",
+  "Request Received",
+  "Technician Assigned"
+]) {
+  const appJs = fs.readFileSync(path.join(root, "app.js"), "utf8");
+  if (!appJs.includes(requiredCustomerCode)) {
+    console.error(`Customer dashboard code is missing: ${requiredCustomerCode}`);
+    failed = true;
+  }
+}
+
+if (/independent provider|marketplace|assigned provider|service provider/i.test(appHtml)) {
+  console.error("Provider marketplace language remains in the customer portal.");
+  failed = true;
+}
+
 if (!providerHtml.includes("data-provider-auth-form") || !providerHtml.includes("data-provider-jobs")) {
   console.error("Provider workflow UI is missing.");
+  failed = true;
+}
+
+if (!adminHtml.includes('data-ops-tab="workers"') || !adminHtml.includes('data-worker-form')) {
+  console.error("Admin worker management UI is missing.");
+  failed = true;
+}
+
+if (adminHtml.includes('data-ops-tab="providers"') || /Pending provider approvals|provider approval/i.test(adminHtml)) {
+  console.error("Deprecated provider approval UI remains in the admin dashboard.");
+  failed = true;
+}
+
+for (const requiredAdminCode of ["/api/admin/workers", "/assign-worker", "/schedule", "SCHEDULED", "data-toggle-worker", "data-moderate-review"]) {
+  if (!adminJs.includes(requiredAdminCode)) {
+    console.error(`Admin workflow is missing: ${requiredAdminCode}`);
+    failed = true;
+  }
+}
+
+for (const requiredBuiltAsset of ["admin-login.html", "admin.html", "admin.js"]) {
+  if (!buildJs.includes(`\"${requiredBuiltAsset}\"`)) {
+    console.error(`Build is missing admin asset: ${requiredBuiltAsset}`);
+    failed = true;
+  }
+}
+
+if (!adminJs.includes("error.status = response.status") || !adminJs.includes("error.status === 401 || error.status === 403")) {
+  console.error("Admin bootstrap must redirect only for an unauthorized response.");
+  failed = true;
+}
+
+const productionCookieFlags = childProcess.execFileSync(process.execPath, [
+  "-e",
+  "process.env.NODE_ENV='production'; const { adminSessionCookie } = require('./lib/auth'); console.log(adminSessionCookie('test').split(';').slice(1).join(';'))"
+], { cwd: root, encoding: "utf8" });
+if (!productionCookieFlags.includes("Secure")) {
+  console.error("Production admin cookies must include Secure.");
   failed = true;
 }
 
@@ -119,7 +201,9 @@ function request(port, method, pathname, body, cookie, headers = {}) {
           status: res.statusCode,
           headers: res.headers,
           cookie: setCookie,
-          body: data ? JSON.parse(data) : {}
+          body: String(res.headers["content-type"] || "").includes("application/json")
+            ? (data ? JSON.parse(data) : {})
+            : data
         });
       });
     });
@@ -132,10 +216,14 @@ function request(port, method, pathname, body, cookie, headers = {}) {
   });
 }
 
+function futureIso(days = 7) {
+  return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 async function runEndToEnd() {
   resetSessions();
   const dbPath = path.join(os.tmpdir(), `tikka-test-${Date.now()}.json`);
-  const server = createApp({ dbPath });
+  const server = createApp({ dbPath, storageDriver: "json" });
   const port = await listen(server);
 
   try {
@@ -171,6 +259,11 @@ async function runEndToEnd() {
     response = await request(port, "GET", `/api/requests/${requestId}`, null, customerCookie);
     assertStatus(response, 200, "retrieve own request");
     assert(response.body.request.status === "NEW", "new request should start at NEW");
+    assert(response.body.request.address === "Colombo 05", "customer request should expose service address");
+
+    response = await request(port, "GET", "/api/auth/me", null, customerCookie);
+    assertStatus(response, 200, "restore customer session");
+    assert(response.body.customer.name === "Amali Silva", "session restore should include customer name");
 
     response = await request(port, "POST", "/api/auth/register", {
       name: "Different Customer",
@@ -192,20 +285,92 @@ async function runEndToEnd() {
       }
     );
     assertStatus(response, 200, "admin login");
-    const adminCookie = response.cookie;
+    let adminCookie = response.cookie;
+    assert(response.headers["set-cookie"][0].includes("HttpOnly"), "admin login should set HttpOnly cookie");
+    assert(response.headers["set-cookie"][0].includes("SameSite=Lax"), "admin login should set SameSite=Lax cookie");
+    assert(response.headers["set-cookie"][0].includes("Path=/"), "admin login should set root cookie path");
+    assert(!response.headers["set-cookie"][0].includes("Secure"), "localhost development must not set Secure admin cookie");
+
+    response = await request(port, "GET", "/api/admin/me", null, adminCookie);
+    assertStatus(response, 200, "admin session restore");
+    response = await request(port, "GET", "/admin.html", null, adminCookie);
+    assertStatus(response, 200, "authenticated admin page refresh");
+
+    response = await request(port, "POST", "/api/admin/login", {
+      email: process.env.TIKKA_ADMIN_EMAIL,
+      password: "incorrect-password"
+    });
+    assertStatus(response, 401, "invalid admin login");
+
+    response = await request(port, "POST", "/api/admin/workers", {
+      name: "Test Operations Worker",
+      phone: "+94774440000",
+      serviceArea: "Colombo",
+      skills: ["Cleaning"],
+      services: ["Cleaning"]
+    }, adminCookie);
+    assertStatus(response, 201, "admin creates worker");
+    const workerId = response.body.worker.id;
 
     response = await request(
       port,
       "POST",
-      `/api/admin/requests/${requestId}/assign`,
-      { providerId: "provider-sunil", scheduledAt: "2026-09-01T10:30:00.000Z" },
+      `/api/admin/requests/${requestId}/schedule`,
+      { scheduledAt: "not-a-date" },
       adminCookie
     );
-    assertStatus(response, 200, "assign provider placeholder");
-    assert(response.body.request.status === "ASSIGNED", "assigned request should be ASSIGNED");
-    assert(response.body.request.assignedProvider.name === "Sunil Perera", "provider info missing");
+    assertStatus(response, 400, "reject invalid schedule date");
 
-    for (const status of ["ACCEPTED", "IN_PROGRESS", "COMPLETED"]) {
+    response = await request(
+      port,
+      "POST",
+      `/api/admin/requests/${requestId}/assign-worker`,
+      { workerId },
+      adminCookie
+    );
+    assertStatus(response, 409, "prevent assignment before scheduling");
+
+    response = await request(
+      port,
+      "POST",
+      `/api/admin/requests/${requestId}/status`,
+      { status: "REVIEWING" },
+      adminCookie
+    );
+    assertStatus(response, 200, "transition to REVIEWING");
+
+    const scheduledAt = futureIso();
+    response = await request(
+      port,
+      "POST",
+      `/api/admin/requests/${requestId}/schedule`,
+      { scheduledAt },
+      adminCookie
+    );
+    assertStatus(response, 200, "schedule request");
+    assert(response.body.request.status === "SCHEDULED", "scheduled request should be SCHEDULED");
+    assert(response.body.request.scheduledAt === scheduledAt, "scheduledAt should be stored");
+
+    response = await request(port, "GET", `/api/requests/${requestId}`, null, customerCookie);
+    assertStatus(response, 200, "customer can see scheduled request");
+    assert(response.body.request.scheduledAt === scheduledAt, "customer response should include scheduledAt");
+
+    response = await request(
+      port,
+      "POST",
+      `/api/admin/requests/${requestId}/assign-worker`,
+      { workerId },
+      adminCookie
+    );
+    assertStatus(response, 200, "assign worker");
+    assert(response.body.request.status === "ASSIGNED", "assigned request should be ASSIGNED");
+    assert(response.body.request.assignedWorker.id === workerId, "worker info missing");
+
+    response = await request(port, "GET", `/api/requests/${requestId}`, null, customerCookie);
+    assertStatus(response, 200, "customer can see assigned worker");
+    assert(response.body.request.assignedWorker.name === "Test Operations Worker", "customer response should include assigned TIKKA technician");
+
+    for (const status of ["IN_PROGRESS", "COMPLETED"]) {
       response = await request(
         port,
         "POST",
@@ -225,6 +390,17 @@ async function runEndToEnd() {
       comment: "Clean and well coordinated."
     }, customerCookie);
     assertStatus(response, 201, "submit review");
+
+    response = await request(port, "POST", "/api/admin/logout", null, adminCookie);
+    assertStatus(response, 200, "admin logout");
+    response = await request(port, "GET", "/api/admin/me", null, adminCookie);
+    assertStatus(response, 401, "logout invalidates admin session");
+    response = await request(port, "POST", "/api/admin/login", {
+      email: process.env.TIKKA_ADMIN_EMAIL,
+      password: process.env.TIKKA_ADMIN_PASSWORD
+    });
+    assertStatus(response, 200, "admin login after logout");
+    adminCookie = response.cookie;
 
     response = await request(port, "POST", `/api/requests/${requestId}/review`, {
       rating: 4,
@@ -290,7 +466,7 @@ async function runEndToEnd() {
       port,
       "POST",
       `/api/admin/requests/${providerJobId}/assign`,
-      { providerId, scheduledAt: "2026-09-03T15:00:00.000Z" },
+      { providerId, scheduledAt: futureIso(8) },
       adminCookie
     );
     assertStatus(response, 200, "assign approved provider");

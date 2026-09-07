@@ -74,6 +74,16 @@ function providerFromRow(row) {
   };
 }
 
+function workerFromRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id, name: row.name, phone: row.phone, serviceArea: row.service_area,
+    notes: row.notes, availabilityStatus: row.availability_status, active: row.active,
+    skills: row.skills || [], services: row.services || [], rating: row.rating === null ? null : Number(row.rating),
+    completedJobs: row.completed_jobs || 0, createdAt: asIso(row.created_at), updatedAt: asIso(row.updated_at)
+  };
+}
+
 function requestFromRow(row) {
   if (!row) {
     return null;
@@ -95,6 +105,7 @@ function requestFromRow(row) {
     photos: row.photos || [],
     status: row.status,
     providerId: row.provider_id,
+    assignedWorkerId: row.assigned_worker_id,
     scheduledAt: asIso(row.scheduled_at),
     assignedByAdminId: row.assigned_by_admin_id,
     assignedAt: asIso(row.assigned_at),
@@ -194,7 +205,8 @@ class PostgresStore {
       requests,
       reviews,
       providers,
-      admins: [],
+      workers: await this.listWorkers(),
+      admins: this.admin ? [this.admin] : [],
       categories
     };
   }
@@ -439,6 +451,72 @@ class PostgresStore {
     return this.providerSelect(this.pool, "", [], "ORDER BY p.created_at DESC");
   }
 
+  async workerSelect(whereSql = "", params = [], client = this.pool) {
+    const result = await client.query(`
+      SELECT w.*, COALESCE(array_agg(DISTINCT ws.skill) FILTER (WHERE ws.skill IS NOT NULL), '{}') skills,
+             COALESCE(array_agg(DISTINCT sc.name) FILTER (WHERE sc.name IS NOT NULL), '{}') services
+      FROM workers w LEFT JOIN worker_skills ws ON ws.worker_id = w.id
+      LEFT JOIN worker_services wsv ON wsv.worker_id = w.id
+      LEFT JOIN service_categories sc ON sc.id = wsv.service_category_id
+      ${whereSql} GROUP BY w.id ORDER BY w.created_at DESC`, params);
+    return result.rows.map(workerFromRow);
+  }
+
+  async createWorker(value) {
+    return transaction(this.pool, async (client) => {
+      const result = await client.query(`INSERT INTO workers (id, name, phone, service_area, notes, availability_status, active, rating, completed_jobs)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [value.id || createId("worker"), value.name, value.phone, value.serviceArea || null, value.notes || null,
+          value.availabilityStatus || "AVAILABLE", value.active !== false, value.rating || null, value.completedJobs || 0]);
+      const workerId = result.rows[0].id;
+      for (const skill of value.skills || []) await client.query("INSERT INTO worker_skills (worker_id, skill) VALUES ($1,$2) ON CONFLICT DO NOTHING", [workerId, skill]);
+      for (const service of value.services || []) {
+        await client.query("INSERT INTO worker_services (worker_id, service_category_id) SELECT $1, id FROM service_categories WHERE name = $2 ON CONFLICT DO NOTHING", [workerId, service]);
+      }
+      return (await this.workerSelect("WHERE w.id = $1", [workerId], client))[0];
+    });
+  }
+
+  async findWorkerById(id) { return (await this.workerSelect("WHERE w.id = $1", [id]))[0] || null; }
+  async listWorkers() { return this.workerSelect(); }
+  async updateWorker(id, value) {
+    const current = await this.findWorkerById(id); if (!current) throw notFoundError("Worker not found.");
+    const result = await this.query(`UPDATE workers SET name=$2, phone=$3, service_area=$4, notes=$5, active=$6, availability_status=$7, updated_at=now() WHERE id=$1 RETURNING id`,
+      [id, value.name ?? current.name, value.phone ?? current.phone, value.serviceArea ?? current.serviceArea, value.notes ?? current.notes, value.active ?? current.active, value.availabilityStatus ?? current.availabilityStatus]);
+    if (!result.rows[0]) throw notFoundError("Worker not found.");
+    return this.findWorkerById(id);
+  }
+  async toggleWorkerActive(id) { const worker = await this.findWorkerById(id); if (!worker) throw notFoundError("Worker not found."); return this.updateWorker(id, { active: !worker.active }); }
+  async updateWorkerAvailability(id, availabilityStatus) { return this.updateWorker(id, { availabilityStatus }); }
+  async assignWorkerToRequest(requestId, workerId, scheduledAt, adminId) {
+    return transaction(this.pool, async (client) => {
+      const worker = await this.findWorkerById(workerId); if (!worker || !worker.active) throw conflictError("Only active workers can be assigned jobs.");
+      const result = await client.query(`UPDATE service_requests SET assigned_worker_id=$2, scheduled_at=COALESCE($3, scheduled_at), status='ASSIGNED', assigned_by_admin_id=$4, assigned_at=now(), updated_at=now() WHERE id=$1 AND status = 'SCHEDULED' RETURNING id`, [requestId, workerId, scheduledAt || null, adminId || null]);
+      if (!result.rows[0]) throw conflictError("Schedule the request before assigning a worker.");
+      return this.findRequestById(requestId, client);
+    });
+  }
+
+  async scheduleRequest(requestId, scheduledAt) {
+    const result = await this.query(
+      `
+        UPDATE service_requests
+        SET scheduled_at = $2,
+            status = CASE WHEN status = 'REVIEWING' THEN 'SCHEDULED' ELSE status END,
+            updated_at = now()
+        WHERE id = $1 AND status IN ('REVIEWING', 'SCHEDULED', 'ASSIGNED')
+        RETURNING id
+      `,
+      [requestId, scheduledAt]
+    );
+    if (!result.rows[0]) {
+      const request = await this.findRequestById(requestId);
+      if (!request) throw notFoundError("Request not found.");
+      throw conflictError("This request cannot be scheduled from its current status.", request.status);
+    }
+    return this.findRequestById(requestId);
+  }
+
   async replaceProviderSkills(client, providerId, skills) {
     await client.query("DELETE FROM provider_skills WHERE provider_id = $1", [providerId]);
     for (const skill of skills) {
@@ -612,7 +690,7 @@ class PostgresStore {
               assigned_by_admin_id = $4,
               assigned_at = now(),
               updated_at = now()
-          WHERE id = $1 AND status IN ('NEW', 'REVIEWING')
+          WHERE id = $1 AND status IN ('NEW', 'REVIEWING', 'SCHEDULED')
           RETURNING *
         `,
         [requestId, providerId, scheduledAt || null, adminId || null]
@@ -796,7 +874,7 @@ class PostgresStore {
           (SELECT count(*)::int FROM providers) AS total_providers,
           (SELECT count(*)::int FROM providers WHERE state = 'PENDING_VERIFICATION') AS pending_provider_approvals,
           (SELECT count(*)::int FROM service_requests WHERE status = 'NEW') AS new_job_requests,
-          (SELECT count(*)::int FROM service_requests WHERE status IN ('REVIEWING', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS')) AS active_jobs,
+          (SELECT count(*)::int FROM service_requests WHERE status IN ('REVIEWING', 'SCHEDULED', 'ASSIGNED', 'ACCEPTED', 'IN_PROGRESS')) AS active_jobs,
           (SELECT count(*)::int FROM service_requests WHERE status IN ('COMPLETED', 'CONFIRMED')) AS completed_jobs,
           (SELECT count(*)::int FROM service_requests WHERE status = 'CANCELLED') AS cancelled_jobs
       `

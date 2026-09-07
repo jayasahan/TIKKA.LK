@@ -39,6 +39,7 @@ const {
   validateRegistration,
   validateRequest,
   validateReview,
+  validateSchedule,
   validateStatus
 } = require("./lib/validation");
 
@@ -150,6 +151,17 @@ function sanitizeAdminProvider(provider) {
   };
 }
 
+function sanitizeWorker(worker) {
+  if (!worker) return null;
+  return {
+    id: worker.id, name: worker.name, phone: worker.phone, serviceArea: worker.serviceArea || null,
+    notes: worker.notes || null, skills: worker.skills || [], services: worker.services || [],
+    availabilityStatus: worker.availabilityStatus, active: worker.active,
+    rating: worker.rating || null, completedJobs: worker.completedJobs || 0,
+    createdAt: worker.createdAt || null, updatedAt: worker.updatedAt || null
+  };
+}
+
 function exposeProvider(provider) {
   if (!provider) {
     return null;
@@ -177,8 +189,9 @@ function publicReview(review) {
 }
 
 function exposeRequest(request, database) {
-  const provider = database.providers.find((item) => item.id === request.providerId);
-  const review = database.reviews.find((item) => item.requestId === request.id);
+  const provider = (database.providers || []).find((item) => item.id === request.providerId);
+  const worker = (database.workers || []).find((item) => item.id === request.assignedWorkerId);
+  const review = (database.reviews || []).find((item) => item.requestId === request.id);
 
   return {
     id: request.id,
@@ -191,16 +204,18 @@ function exposeRequest(request, database) {
     scheduledAt: request.scheduledAt || null,
     preferredDate: request.preferredDate,
     preferredTime: request.preferredTime,
+    address: request.address || null,
     assignedProvider: exposeProvider(provider),
+    assignedWorker: sanitizeWorker(worker),
     review: publicReview(review)
   };
 }
 
 function exposeAdminRequest(request, database) {
-  const provider = database.providers.find((item) => item.id === request.providerId);
-  const admin = database.admins.find((item) => item.id === request.assignedByAdminId);
-  const customer = database.customers.find((item) => item.id === request.customerId);
-  const review = database.reviews.find((item) => item.requestId === request.id);
+  const provider = (database.providers || []).find((item) => item.id === request.providerId);
+  const admin = (database.admins || []).find((item) => item.id === request.assignedByAdminId);
+  const customer = (database.customers || []).find((item) => item.id === request.customerId);
+  const review = (database.reviews || []).find((item) => item.requestId === request.id);
 
   return {
     ...exposeRequest(request, database),
@@ -213,6 +228,7 @@ function exposeAdminRequest(request, database) {
     photos: request.photos || [],
     assignment: {
       provider: sanitizeAdminProvider(provider),
+      worker: sanitizeWorker((database.workers || []).find((item) => item.id === request.assignedWorkerId)),
       assignedBy: sanitizeAdmin(admin),
       assignedAt: request.assignedAt || null,
       scheduledAt: request.scheduledAt || null
@@ -222,7 +238,7 @@ function exposeAdminRequest(request, database) {
 }
 
 function exposeAdminReview(review, database) {
-  const request = database.requests.find((item) => item.id === review.requestId);
+  const request = (database.requests || []).find((item) => item.id === review.requestId);
   return {
     id: review.id,
     requestId: review.requestId,
@@ -258,25 +274,29 @@ function exposeProviderJob(request) {
 }
 
 async function exposeRequestWithStore(request, store) {
-  const [provider, review] = await Promise.all([
+  const [provider, worker, review] = await Promise.all([
     request.providerId ? store.findProviderById(request.providerId) : null,
+    request.assignedWorkerId ? store.findWorkerById(request.assignedWorkerId) : null,
     store.findReviewByRequestId(request.id)
   ]);
   return exposeRequest(request, {
     providers: provider ? [provider] : [],
+    workers: worker ? [worker] : [],
     reviews: review ? [review] : []
   });
 }
 
 async function exposeAdminRequestWithStore(request, store) {
-  const [provider, admin, customer, review] = await Promise.all([
+  const [provider, worker, admin, customer, review] = await Promise.all([
     request.providerId ? store.findProviderById(request.providerId) : null,
+    request.assignedWorkerId ? store.findWorkerById(request.assignedWorkerId) : null,
     request.assignedByAdminId ? store.findAdminById(request.assignedByAdminId) : null,
     request.customerId ? store.findCustomerById(request.customerId) : null,
     store.findReviewByRequestId(request.id)
   ]);
   return exposeAdminRequest(request, {
     providers: provider ? [provider] : [],
+    workers: worker ? [worker] : [],
     admins: admin ? [admin] : [],
     customers: customer ? [customer] : [],
     reviews: review ? [review] : []
@@ -545,6 +565,84 @@ async function handleApi(request, response, store, url) {
       sendJson(response, 200, {
         customers: (await store.listCustomers()).map(sanitizeCustomer)
       });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/admin/workers") {
+      if (!await requireAdmin(request, response, store)) return;
+      sendJson(response, 200, { workers: (await store.listWorkers()).map(sanitizeWorker) });
+      return;
+    }
+
+    const workerMatch = url.pathname.match(/^\/api\/admin\/workers\/([^/]+)$/);
+    if (request.method === "GET" && workerMatch) {
+      if (!await requireAdmin(request, response, store)) return;
+      const worker = await store.findWorkerById(workerMatch[1]);
+      if (!worker) { sendJson(response, 404, { error: "Worker not found." }); return; }
+      sendJson(response, 200, { worker: sanitizeWorker(worker) });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/workers") {
+      if (!await requireAdmin(request, response, store)) return;
+      const body = await readJsonBody(request);
+      if (!String(body.name || "").trim() || !String(body.phone || "").trim()) { sendJson(response, 400, { error: "Name and phone are required." }); return; }
+      const worker = await store.createWorker({ name: body.name.trim(), phone: body.phone.trim(), serviceArea: body.serviceArea, notes: body.notes, skills: body.skills, services: body.services });
+      sendJson(response, 201, { worker: sanitizeWorker(worker) });
+      return;
+    }
+
+    if (request.method === "POST" && workerMatch) {
+      if (!await requireAdmin(request, response, store)) return;
+      const worker = await store.updateWorker(workerMatch[1], await readJsonBody(request));
+      sendJson(response, 200, { worker: sanitizeWorker(worker) });
+      return;
+    }
+
+    const workerActionMatch = url.pathname.match(/^\/api\/admin\/workers\/([^/]+)\/(toggle-active|availability)$/);
+    if (request.method === "POST" && workerActionMatch) {
+      if (!await requireAdmin(request, response, store)) return;
+      const worker = workerActionMatch[2] === "toggle-active"
+        ? await store.toggleWorkerActive(workerActionMatch[1])
+        : await store.updateWorkerAvailability(workerActionMatch[1], (await readJsonBody(request)).availabilityStatus);
+      sendJson(response, 200, { worker: sanitizeWorker(worker) });
+      return;
+    }
+
+    const workerAssignMatch = url.pathname.match(/^\/api\/admin\/requests\/([^/]+)\/assign-worker$/);
+    if (request.method === "POST" && workerAssignMatch) {
+      const auth = await requireAdmin(request, response, store); if (!auth) return;
+      const body = await readJsonBody(request);
+      if (!body.workerId) { sendJson(response, 400, { error: "Worker is required." }); return; }
+      try {
+        const result = await store.assignWorkerToRequest(workerAssignMatch[1], body.workerId, body.scheduledAt, auth.admin.id);
+        sendJson(response, 200, { request: await exposeAdminRequestWithStore(result, store) });
+      } catch (error) {
+        if (error.code === "NOT_FOUND") { sendJson(response, 404, { error: "Request or worker not found." }); return; }
+        if (error.code === "CONFLICT") { sendJson(response, 409, { error: error.message }); return; }
+        throw error;
+      }
+      return;
+    }
+
+    const scheduleMatch = url.pathname.match(/^\/api\/admin\/requests\/([^/]+)\/schedule$/);
+    if (request.method === "POST" && scheduleMatch) {
+      const auth = await requireAdmin(request, response, store);
+      if (!auth) return;
+      const body = await readJsonBody(request);
+      const { errors, value } = validateSchedule(body);
+      if (hasErrors(errors)) {
+        sendJson(response, 400, { errors });
+        return;
+      }
+      try {
+        const serviceRequest = await store.scheduleRequest(scheduleMatch[1], value.scheduledAt, auth.admin.id);
+        sendJson(response, 200, { request: await exposeAdminRequestWithStore(serviceRequest, store) });
+      } catch (error) {
+        if (error.code === "NOT_FOUND") { sendJson(response, 404, { error: "Request not found." }); return; }
+        if (error.code === "CONFLICT") { sendJson(response, 409, { error: error.message }); return; }
+        throw error;
+      }
       return;
     }
 
@@ -1083,8 +1181,8 @@ async function handleApi(request, response, store, url) {
         return;
       }
       const allowed = OPERATOR_TRANSITIONS[existingRequest.status] || [];
-      if (value.status === "ASSIGNED" && !existingRequest.providerId) {
-        sendJson(response, 409, { error: "Assign an approved provider before setting ASSIGNED." });
+      if (value.status === "ASSIGNED" && !existingRequest.providerId && !existingRequest.assignedWorkerId) {
+        sendJson(response, 409, { error: "Assign a worker before setting ASSIGNED." });
         return;
       }
       if (!allowed.includes(value.status)) {

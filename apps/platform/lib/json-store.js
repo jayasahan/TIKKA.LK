@@ -228,6 +228,71 @@ class JsonStore {
     return this.store.read().providers;
   }
 
+  async createWorker(value) {
+    return this.store.update((database) => {
+      if (!Array.isArray(database.workers)) database.workers = [];
+      const worker = {
+        id: value.id || createId("worker"), name: value.name, phone: value.phone,
+        serviceArea: value.serviceArea || null, notes: value.notes || null,
+        availabilityStatus: value.availabilityStatus || "AVAILABLE", active: value.active !== false,
+        skills: value.skills || [], services: value.services || [], rating: value.rating || null,
+        completedJobs: value.completedJobs || 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+      };
+      database.workers.push(worker);
+      return worker;
+    });
+  }
+
+  async findWorkerById(id) { return (this.store.read().workers || []).find((item) => item.id === id) || null; }
+  async listWorkers() { return this.store.read().workers || []; }
+
+  async updateWorker(id, value) {
+    return this.store.update((database) => {
+      const worker = (database.workers || []).find((item) => item.id === id);
+      if (!worker) throw notFoundError("Worker not found.");
+      for (const key of ["name", "phone", "serviceArea", "notes", "skills", "services", "active", "availabilityStatus"]) {
+        if (Object.prototype.hasOwnProperty.call(value, key)) worker[key] = value[key];
+      }
+      worker.updatedAt = new Date().toISOString();
+      return worker;
+    });
+  }
+
+  async toggleWorkerActive(id) {
+    return this.updateWorker(id, { active: !(await this.findWorkerById(id))?.active });
+  }
+
+  async updateWorkerAvailability(id, availabilityStatus) { return this.updateWorker(id, { availabilityStatus }); }
+
+  async assignWorkerToRequest(requestId, workerId, scheduledAt, adminId) {
+    return this.store.update((database) => {
+      const request = database.requests.find((item) => item.id === requestId);
+      const worker = (database.workers || []).find((item) => item.id === workerId);
+      if (!request) throw notFoundError("Request not found.");
+      if (!worker || !worker.active) throw conflictError("Only active workers can be assigned jobs.");
+      if (request.status !== "SCHEDULED") throw conflictError("Schedule the request before assigning a worker.", request.status);
+      request.assignedWorkerId = workerId; request.scheduledAt = scheduledAt || request.scheduledAt || null; request.status = "ASSIGNED";
+      request.assignedByAdminId = adminId; request.assignedAt = new Date().toISOString();
+      return request;
+    });
+  }
+
+  async scheduleRequest(requestId, scheduledAt) {
+    return this.store.update((database) => {
+      const request = database.requests.find((item) => item.id === requestId);
+      if (!request) throw notFoundError("Request not found.");
+      if (!["REVIEWING", "SCHEDULED", "ASSIGNED"].includes(request.status)) {
+        throw conflictError("This request cannot be scheduled from its current status.", request.status);
+      }
+      request.scheduledAt = scheduledAt;
+      if (request.status === "REVIEWING") {
+        request.status = "SCHEDULED";
+      }
+      request.updatedAt = new Date().toISOString();
+      return request;
+    });
+  }
+
   async submitProviderVerification(providerId) {
     return this.store.update((database) => {
       const provider = database.providers.find((item) => item.id === providerId);
@@ -284,6 +349,7 @@ class JsonStore {
         photos: value.photos,
         status: "NEW",
         providerId: null,
+        assignedWorkerId: null,
         scheduledAt: null,
         assignedByAdminId: null,
         assignedAt: null,
@@ -322,7 +388,7 @@ class JsonStore {
       if (!provider || provider.state !== "APPROVED") {
         throw conflictError("Only approved providers can be assigned jobs.");
       }
-      if (!["NEW", "REVIEWING"].includes(serviceRequest.status)) {
+      if (!["NEW", "REVIEWING", "SCHEDULED"].includes(serviceRequest.status)) {
         throw conflictError("This request cannot be assigned from its current status.", serviceRequest.status);
       }
       serviceRequest.providerId = providerId;
@@ -456,7 +522,7 @@ class JsonStore {
       totalProviders: database.providers.length,
       pendingProviderApprovals: database.providers.filter((item) => item.state === "PENDING_VERIFICATION").length,
       newJobRequests: requests.filter((item) => item.status === "NEW").length,
-      activeJobs: requests.filter((item) => ["REVIEWING", "ASSIGNED", "ACCEPTED", "IN_PROGRESS"].includes(item.status)).length,
+      activeJobs: requests.filter((item) => ["REVIEWING", "SCHEDULED", "ASSIGNED", "ACCEPTED", "IN_PROGRESS"].includes(item.status)).length,
       completedJobs: requests.filter((item) => ["COMPLETED", "CONFIRMED"].includes(item.status)).length,
       cancelledJobs: requests.filter((item) => item.status === "CANCELLED").length
     };

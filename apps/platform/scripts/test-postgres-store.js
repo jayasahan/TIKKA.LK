@@ -19,7 +19,8 @@ const providerEmail = `pg.provider.${suffix}@example.com`;
 const created = {
   customerId: null,
   providerId: null,
-  requestId: null,
+  requestIds: [],
+  workerId: null,
   reviewId: null
 };
 
@@ -36,9 +37,14 @@ async function cleanup() {
     await query("DELETE FROM review_moderation_events WHERE review_id = $1", [created.reviewId]);
     await query("DELETE FROM reviews WHERE id = $1", [created.reviewId]);
   }
-  if (created.requestId) {
-    await query("DELETE FROM service_request_photos WHERE service_request_id = $1", [created.requestId]);
-    await query("DELETE FROM service_requests WHERE id = $1", [created.requestId]);
+  for (const requestId of created.requestIds) {
+    await query("DELETE FROM service_request_photos WHERE service_request_id = $1", [requestId]);
+    await query("DELETE FROM service_requests WHERE id = $1", [requestId]);
+  }
+  if (created.workerId) {
+    await query("DELETE FROM worker_services WHERE worker_id = $1", [created.workerId]);
+    await query("DELETE FROM worker_skills WHERE worker_id = $1", [created.workerId]);
+    await query("DELETE FROM workers WHERE id = $1", [created.workerId]);
   }
   if (created.providerId) {
     await query("DELETE FROM provider_services WHERE provider_id = $1", [created.providerId]);
@@ -111,20 +117,53 @@ async function run() {
     preferredTime: "10:30",
     photos: ["before.jpg"]
   });
-  created.requestId = request.id;
+  created.requestIds.push(request.id);
   assert(request.status === "NEW", "request did not start as NEW");
   assert(request.photos.includes("before.jpg"), "request photo filename was not persisted");
 
-  await store.assignProvider(request.id, provider.id, "2026-09-07T10:30:00.000Z", "admin_test");
-  await store.providerJobAction(request.id, provider.id, "accept");
-  await store.providerJobAction(request.id, provider.id, "start");
-  const completed = await store.providerJobAction(request.id, provider.id, "complete");
+  const worker = await store.createWorker({
+    name: "PG Test Worker",
+    phone: "+94772222222",
+    skills: ["Cleaning"],
+    services: ["Cleaning"],
+    serviceArea: "Colombo"
+  });
+  created.workerId = worker.id;
+  const scheduledAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  await assertRejects(() => store.scheduleRequest(request.id, scheduledAt), "schedule should reject NEW requests");
+  await store.updateRequestStatus(request.id, "REVIEWING", "admin_test");
+  const scheduled = await store.scheduleRequest(request.id, scheduledAt);
+  assert(scheduled.status === "SCHEDULED", "schedule did not set SCHEDULED");
+  assert(scheduled.scheduledAt === scheduledAt, "scheduledAt was not persisted");
+  const workerAssigned = await store.assignWorkerToRequest(request.id, worker.id, null, "admin_test");
+  assert(workerAssigned.status === "ASSIGNED", "worker assignment did not set ASSIGNED");
+  assert(workerAssigned.assignedWorkerId === worker.id, "worker assignment was not persisted");
+
+  const providerRequest = await store.createRequest({
+    customerId: customer.id,
+    service: "Cleaning",
+    title: "PG adapter provider request",
+    description: "Verify legacy provider compatibility.",
+    customerName: "PG Test Customer",
+    phone: "+94770000000",
+    email: customerEmail,
+    address: "Colombo",
+    preferredDate: "2026-09-08",
+    preferredTime: "11:30",
+    photos: []
+  });
+  created.requestIds.push(providerRequest.id);
+
+  await store.assignProvider(providerRequest.id, provider.id, new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(), "admin_test");
+  await store.providerJobAction(providerRequest.id, provider.id, "accept");
+  await store.providerJobAction(providerRequest.id, provider.id, "start");
+  const completed = await store.providerJobAction(providerRequest.id, provider.id, "complete");
   assert(completed.status === "COMPLETED", "provider completion failed");
   assert((await store.findProviderById(provider.id)).completedJobs === 1, "completed_jobs aggregate was not updated");
 
-  await store.confirmRequest(request.id, customer.id);
+  await store.confirmRequest(providerRequest.id, customer.id);
   const review = await store.createReview({
-    requestId: request.id,
+    requestId: providerRequest.id,
     customerId: customer.id,
     rating: 5,
     comment: "Adapter test review."
@@ -137,6 +176,15 @@ async function run() {
   assert(moderated.hidden === true, "review moderation failed");
 
   console.log("PostgreSQL storage adapter tests passed.");
+}
+
+async function assertRejects(callback, message) {
+  try {
+    await callback();
+  } catch (error) {
+    return;
+  }
+  throw new Error(message);
 }
 
 run()

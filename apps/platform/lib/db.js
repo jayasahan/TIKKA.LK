@@ -69,6 +69,7 @@ function createEmptyDatabase() {
     requests: [],
     reviews: [],
     providers: defaultProviders,
+    workers: [],
     admins: [],
     categories: seedCategories()
   };
@@ -86,6 +87,9 @@ function normalizeDatabase(database) {
   }
   if (!Array.isArray(database.providers) || database.providers.length === 0) {
     database.providers = defaultProviders;
+  }
+  if (!Array.isArray(database.workers)) {
+    database.workers = [];
   }
   if (!Array.isArray(database.admins)) {
     database.admins = [];

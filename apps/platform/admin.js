@@ -1,521 +1,457 @@
 const state = {
-  admin: null,
   metrics: null,
   jobs: [],
-  providers: [],
-  categories: [],
+  workers: [],
+  customers: [],
   reviews: [],
+  categories: [],
   selectedJobId: null,
-  selectedProviderId: null
+  selectedWorkerId: null
 };
 
-const messageEl = document.querySelector("[data-ops-message]");
-const adminName = document.querySelector("[data-admin-name]");
-const metricsEl = document.querySelector("[data-ops-metrics]");
-const overviewJobs = document.querySelector("[data-overview-jobs]");
-const overviewProviders = document.querySelector("[data-overview-providers]");
-const jobTable = document.querySelector("[data-job-table]");
-const jobDetail = document.querySelector("[data-job-detail]");
-const jobFilters = document.querySelector("[data-job-filters]");
-const providerTable = document.querySelector("[data-provider-table]");
-const providerDetail = document.querySelector("[data-provider-detail]");
-const categoryTable = document.querySelector("[data-category-table]");
-const categoryForm = document.querySelector("[data-category-form]");
-const reviewTable = document.querySelector("[data-review-table]");
+const $ = (selector) => document.querySelector(selector);
+const messageEl = $("[data-ops-message]");
+const esc = (value) => String(value ?? "").replace(/[&<>"']/g, (character) => ({
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;"
+}[character]));
+const date = (value) => value ? new Date(value).toLocaleString() : "Not recorded";
+
+function message(text, tone = "neutral") {
+  messageEl.textContent = text;
+  messageEl.dataset.tone = tone;
+}
+
+function errors(error) {
+  return error.payload?.errors ? Object.values(error.payload.errors).join(" ") : error.message;
+}
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
     credentials: "same-origin",
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    },
+    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
     ...options
   });
   const payload = await response.json();
   if (!response.ok) {
     const error = new Error(payload.error || "Request failed.");
     error.payload = payload;
+    error.status = response.status;
     throw error;
   }
   return payload;
 }
 
-function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[character]));
+function table(headers, rows, empty) {
+  if (!rows.length) return `<p class="muted">${esc(empty)}</p>`;
+  return `<table class="ops-table"><thead><tr>${headers.map((header) => `<th>${esc(header)}</th>`).join("")}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
 }
 
-function setMessage(text, tone = "neutral") {
-  if (!messageEl) {
-    return;
-  }
-  messageEl.textContent = text;
-  messageEl.dataset.tone = tone;
-}
-
-function describeErrors(error) {
-  if (error.payload && error.payload.errors) {
-    return Object.values(error.payload.errors).join(" ");
-  }
-  return error.message;
-}
-
-function formatDate(value) {
-  return value ? new Date(value).toLocaleString() : "—";
-}
-
-function switchTab(tab) {
+function tab(name) {
   document.querySelectorAll("[data-ops-tab]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.opsTab === tab);
+    button.classList.toggle("is-active", button.dataset.opsTab === name);
   });
   document.querySelectorAll("[data-ops-panel]").forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.opsPanel === tab);
+    panel.classList.toggle("is-active", panel.dataset.opsPanel === name);
   });
 }
 
-function metricCard(label, value) {
-  return `<article class="ops-metric"><p>${escapeHtml(label)}</p><strong>${escapeHtml(value)}</strong></article>`;
-}
-
-function renderMetrics() {
-  if (!metricsEl || !state.metrics) {
-    return;
-  }
-  const metrics = state.metrics;
-  metricsEl.innerHTML = [
-    metricCard("Customers", metrics.totalCustomers),
-    metricCard("Providers", metrics.totalProviders),
-    metricCard("Pending approvals", metrics.pendingProviderApprovals),
-    metricCard("New requests", metrics.newJobRequests),
-    metricCard("Active jobs", metrics.activeJobs),
-    metricCard("Completed", metrics.completedJobs),
-    metricCard("Cancelled", metrics.cancelledJobs)
-  ].join("");
+function metric(label, value) {
+  return `<article class="ops-metric"><p>${esc(label)}</p><strong>${esc(value)}</strong></article>`;
 }
 
 function renderOverview() {
-  const newJobs = state.jobs.filter((job) => job.status === "NEW");
-  const pending = state.providers.filter((provider) => provider.state === "PENDING_VERIFICATION");
-  overviewJobs.innerHTML = tableMarkup(
-    ["Reference", "Service", "Customer", "Submitted"],
-    newJobs.map((job) => [
-      job.reference,
-      job.service,
-      job.customerName,
-      formatDate(job.submittedAt)
+  const counts = state.jobs.reduce((accumulator, job) => {
+    accumulator[job.status] = (accumulator[job.status] || 0) + 1;
+    return accumulator;
+  }, {});
+  const active = state.workers.filter((worker) => worker.active).length;
+  $("[data-ops-metrics]").innerHTML = [
+    metric("New requests", counts.NEW || 0),
+    metric("Under review", counts.REVIEWING || 0),
+    metric("Scheduled jobs", counts.SCHEDULED || 0),
+    metric("Assigned jobs", counts.ASSIGNED || 0),
+    metric("Jobs in progress", counts.IN_PROGRESS || 0),
+    metric("Completed", (counts.COMPLETED || 0) + (counts.CONFIRMED || 0)),
+    metric("Active workers", active),
+    metric("Total customers", state.customers.length)
+  ].join("");
+  $("[data-overview-jobs]").innerHTML = table(
+    ["Reference", "Customer", "Service", "Status", "Scheduled"],
+    state.jobs.slice(0, 8).map((job) => [
+      esc(job.reference),
+      esc(job.customerName),
+      esc(job.service),
+      `<span class="status-badge">${esc(job.status)}</span>`,
+      esc(date(job.scheduledAt))
     ]),
-    "No new job requests."
+    "No requests yet."
   );
-  overviewProviders.innerHTML = tableMarkup(
-    ["Name", "Area", "Submitted"],
-    pending.map((provider) => [
-      provider.name,
-      provider.serviceArea,
-      formatDate(provider.verificationSubmittedAt)
-    ]),
-    "No pending approvals."
+  $("[data-overview-workers]").innerHTML = table(
+    ["Worker", "Availability", "Area"],
+    state.workers
+      .filter((worker) => !worker.active || worker.availabilityStatus !== "AVAILABLE")
+      .map((worker) => [
+        esc(worker.name),
+        `<span class="status-badge">${esc(worker.active ? worker.availabilityStatus : "INACTIVE")}</span>`,
+        esc(worker.serviceArea)
+      ]),
+    "All active workers are available."
   );
-}
-
-function tableMarkup(headers, rows, emptyText) {
-  if (rows.length === 0) {
-    return `<p class="muted">${escapeHtml(emptyText)}</p>`;
-  }
-  return `
-    <table class="ops-table">
-      <thead>
-        <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr>
-      </thead>
-      <tbody>
-        ${rows.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("")}
-      </tbody>
-    </table>
-  `;
 }
 
 function renderJobs() {
-  const rows = state.jobs.map((job) => [
-    `<button class="text-action" type="button" data-select-job="${escapeHtml(job.id)}">${escapeHtml(job.reference)}</button>`,
-    escapeHtml(job.service),
-    escapeHtml(job.customerName),
-    `<span class="status-badge">${escapeHtml(job.status)}</span>`,
-    escapeHtml(job.assignment.provider ? job.assignment.provider.name : "Unassigned")
-  ]);
-  jobTable.innerHTML = tableMarkup(
-    ["Reference", "Service", "Customer", "Status", "Provider"],
-    rows,
-    "No jobs match this filter."
+  $("[data-job-table]").innerHTML = table(
+    ["Reference", "Customer", "Service", "Status", "Scheduled", "Worker"],
+    state.jobs.map((job) => [
+      `<button class="text-action" type="button" data-select-job="${esc(job.id)}">${esc(job.reference)}</button>`,
+      esc(job.customerName),
+      esc(job.service),
+      `<span class="status-badge">${esc(job.status)}</span>`,
+      esc(date(job.scheduledAt)),
+      esc(job.assignment?.worker?.name || "Unassigned")
+    ]),
+    "No requests match this filter."
   );
   renderJobDetail();
 }
 
-function jobStatusActions(job) {
-  const actions = {
+function statusButtons(job) {
+  const next = {
     NEW: ["REVIEWING", "CANCELLED", "REJECTED"],
     REVIEWING: ["CANCELLED", "REJECTED"],
-    ASSIGNED: ["CANCELLED", "REJECTED"],
-    ACCEPTED: ["CANCELLED"],
-    IN_PROGRESS: ["CANCELLED"],
-    COMPLETED: [],
-    CONFIRMED: [],
-    CANCELLED: [],
-    REJECTED: []
-  };
-  return (actions[job.status] || [])
-    .map(
-      (status) =>
-        `<button class="button button--secondary" type="button" data-job-status="${status}">${status}</button>`
-    )
-    .join("");
+    SCHEDULED: ["CANCELLED", "REJECTED"],
+    ASSIGNED: ["IN_PROGRESS", "CANCELLED", "REJECTED"],
+    IN_PROGRESS: ["COMPLETED", "CANCELLED"]
+  }[job.status] || [];
+  return next.map((status) => `<button class="button button--secondary" type="button" data-job-status="${status}">${status === "REVIEWING" ? "Start review" : status.replaceAll("_", " ")}</button>`).join("");
 }
 
-function approvedProviders() {
-  return state.providers.filter((provider) => provider.state === "APPROVED");
+function renderScheduleForm(job) {
+  const canSchedule = ["REVIEWING", "SCHEDULED", "ASSIGNED"].includes(job.status);
+  if (!canSchedule) return "";
+  return `<form data-schedule-form>
+    <label><span>${job.scheduledAt ? "Reschedule job" : "Scheduled at"}</span><input name="scheduledAt" type="datetime-local" required></label>
+    <button class="button button--primary" type="submit">${job.scheduledAt ? "Reschedule Job" : "Schedule Job"}</button>
+  </form>`;
+}
+
+function renderAssignForm(job, workers) {
+  if (job.status !== "SCHEDULED") return "";
+  return `<form data-assign-form>
+    <label><span>Assign active worker</span><select name="workerId" required><option value="">Choose worker</option>${workers.map((worker) => `<option value="${esc(worker.id)}">${esc(worker.name)} | ${esc(worker.availabilityStatus)} | ${esc(worker.serviceArea)}</option>`).join("")}</select></label>
+    <button class="button button--primary" type="submit">Assign Worker</button>
+  </form>`;
 }
 
 function renderJobDetail() {
   const job = state.jobs.find((item) => item.id === state.selectedJobId);
+  const target = $("[data-job-detail]");
   if (!job) {
-    jobDetail.innerHTML = '<p class="muted">Select a job to review, assign, or update status.</p>';
+    target.innerHTML = `<p class="muted">Select a request to review, schedule, assign, or update.</p>`;
     return;
   }
-
-  const assignable = ["NEW", "REVIEWING"].includes(job.status);
-  const providerOptions = approvedProviders()
-    .map((provider) => `<option value="${escapeHtml(provider.id)}">${escapeHtml(provider.name)} · ${escapeHtml(provider.serviceArea)}</option>`)
-    .join("");
-
-  jobDetail.innerHTML = `
-    <p class="eyebrow">${escapeHtml(job.reference)}</p>
-    <h2>${escapeHtml(job.title)}</h2>
-    <p class="status-badge">${escapeHtml(job.status)}</p>
+  const workers = state.workers.filter((worker) => worker.active);
+  target.innerHTML = `<p class="eyebrow">${esc(job.reference)}</p>
+    <h2>${esc(job.title)}</h2>
+    <p class="status-badge">${esc(job.status)}</p>
     <dl class="request-meta">
-      <div><dt>Service</dt><dd>${escapeHtml(job.service)}</dd></div>
-      <div><dt>Customer</dt><dd>${escapeHtml(job.customerName)}</dd></div>
-      <div><dt>Phone</dt><dd>${escapeHtml(job.phone)}</dd></div>
-      <div><dt>Location</dt><dd>${escapeHtml(job.address)}</dd></div>
-      <div><dt>Preferred</dt><dd>${escapeHtml(job.preferredDate)} ${escapeHtml(job.preferredTime)}</dd></div>
-      <div><dt>Submitted</dt><dd>${escapeHtml(formatDate(job.submittedAt))}</dd></div>
+      <div><dt>Customer</dt><dd>${esc(job.customerName)}</dd></div>
+      <div><dt>Phone</dt><dd>${esc(job.phone)}</dd></div>
+      <div><dt>Email</dt><dd>${esc(job.email)}</dd></div>
+      <div><dt>Address</dt><dd>${esc(job.address)}</dd></div>
+      <div><dt>Service</dt><dd>${esc(job.service)}</dd></div>
+      <div><dt>Preferred</dt><dd>${esc(job.preferredDate)} ${esc(job.preferredTime)}</dd></div>
+      <div><dt>Scheduled</dt><dd>${esc(date(job.scheduledAt))}</dd></div>
+      <div><dt>Submitted</dt><dd>${esc(date(job.submittedAt))}</dd></div>
+      <div><dt>Worker</dt><dd>${esc(job.assignment?.worker?.name || "Not assigned")}</dd></div>
     </dl>
-    <p>${escapeHtml(job.description)}</p>
-    <p><strong>Assignment</strong><br>
-      Provider: ${escapeHtml(job.assignment.provider ? job.assignment.provider.name : "Not assigned")}<br>
-      Operator: ${escapeHtml(job.assignment.assignedBy ? job.assignment.assignedBy.name : "—")}<br>
-      Assigned: ${escapeHtml(formatDate(job.assignment.assignedAt))}
-    </p>
-    ${assignable ? `
-      <form data-assign-form>
-        <label>
-          <span>Assign approved provider</span>
-          <select name="providerId" required>
-            <option value="">Choose provider</option>
-            ${providerOptions}
-          </select>
-        </label>
-        <label>
-          <span>Scheduled at</span>
-          <input name="scheduledAt" type="datetime-local">
-        </label>
-        <button class="button button--primary" type="submit">Assign provider</button>
-      </form>
-    ` : ""}
-    <div class="ops-actions">${jobStatusActions(job)}</div>
-  `;
+    <p>${esc(job.description)}</p>
+    ${renderScheduleForm(job)}
+    ${renderAssignForm(job, workers)}
+    <div class="ops-actions">${statusButtons(job)}</div>`;
 }
 
-function renderProviders() {
-  const rows = state.providers.map((provider) => [
-    `<button class="text-action" type="button" data-select-provider="${escapeHtml(provider.id)}">${escapeHtml(provider.name)}</button>`,
-    escapeHtml(provider.serviceArea),
-    `<span class="status-badge">${escapeHtml(provider.state)}</span>`,
-    escapeHtml((provider.services || []).join(", "))
-  ]);
-  providerTable.innerHTML = tableMarkup(
-    ["Name", "Area", "State", "Services"],
-    rows,
-    "No providers yet."
+function renderWorkers() {
+  $("[data-worker-table]").innerHTML = table(
+    ["Worker", "Phone", "Skills / services", "Availability", "Jobs", "Status"],
+    state.workers.map((worker) => [
+      `<button class="text-action" type="button" data-select-worker="${esc(worker.id)}">${esc(worker.name)}</button>`,
+      esc(worker.phone),
+      esc([...(worker.skills || []), ...(worker.services || [])].join(", ")),
+      esc(worker.availabilityStatus),
+      esc(worker.completedJobs),
+      esc(worker.active ? "Active" : "Inactive")
+    ]),
+    "No workers created yet."
   );
-  renderProviderDetail();
+  renderWorkerDetail();
 }
 
-function providerActions(provider) {
-  const buttons = [];
-  if (provider.state === "PENDING_VERIFICATION") {
-    buttons.push('<button class="button button--primary" type="button" data-provider-state="APPROVED">Approve</button>');
-    buttons.push('<button class="button button--secondary" type="button" data-provider-state="REJECTED">Reject</button>');
-  }
-  if (provider.state === "REGISTERED") {
-    buttons.push('<button class="button button--secondary" type="button" data-provider-state="REJECTED">Reject</button>');
-  }
-  if (provider.state === "APPROVED") {
-    buttons.push('<button class="button button--secondary" type="button" data-provider-state="DISABLED">Disable</button>');
-  }
-  if (provider.state === "DISABLED") {
-    buttons.push('<button class="button button--primary" type="button" data-provider-state="APPROVED">Enable</button>');
-  }
-  return buttons.join("");
-}
-
-function renderProviderDetail() {
-  const provider = state.providers.find((item) => item.id === state.selectedProviderId);
-  if (!provider) {
-    providerDetail.innerHTML = '<p class="muted">Select a provider to review verification and approval.</p>';
+function renderWorkerDetail() {
+  const worker = state.workers.find((item) => item.id === state.selectedWorkerId);
+  const target = $("[data-worker-detail]");
+  if (!worker) {
+    target.innerHTML = `<p class="muted">Select a worker to edit their operational record.</p>`;
     return;
   }
-  providerDetail.innerHTML = `
-    <p class="eyebrow">Provider profile</p>
-    <h2>${escapeHtml(provider.name)}</h2>
-    <p class="status-badge">${escapeHtml(provider.state)}</p>
-    <dl class="request-meta">
-      <div><dt>Phone</dt><dd>${escapeHtml(provider.phone)}</dd></div>
-      <div><dt>Email</dt><dd>${escapeHtml(provider.email)}</dd></div>
-      <div><dt>Area</dt><dd>${escapeHtml(provider.serviceArea)}</dd></div>
-      <div><dt>Experience</dt><dd>${escapeHtml(provider.experienceYears)} years</dd></div>
-      <div><dt>Verification submitted</dt><dd>${escapeHtml(formatDate(provider.verificationSubmittedAt))}</dd></div>
-      <div><dt>Reviewed</dt><dd>${escapeHtml(formatDate(provider.reviewedAt))}</dd></div>
-    </dl>
-    <p><strong>Skills</strong><br>${escapeHtml((provider.skills || []).join(", "))}</p>
-    <p><strong>Services</strong><br>${escapeHtml((provider.services || []).join(", "))}</p>
-    <p><strong>Qualifications</strong><br>${escapeHtml(provider.qualifications)}</p>
-    <p>${escapeHtml(provider.description)}</p>
-    <div class="ops-actions">${providerActions(provider)}</div>
-  `;
+  target.innerHTML = `<p class="eyebrow">Internal worker</p><h2>${esc(worker.name)}</h2><p class="status-badge">${esc(worker.active ? worker.availabilityStatus : "INACTIVE")}</p><dl class="request-meta"><div><dt>Phone</dt><dd>${esc(worker.phone)}</dd></div><div><dt>Area</dt><dd>${esc(worker.serviceArea)}</dd></div><div><dt>Completed jobs</dt><dd>${esc(worker.completedJobs)}</dd></div><div><dt>Rating</dt><dd>${esc(worker.rating || "Not rated")}</dd></div></dl><p><strong>Skills</strong><br>${esc((worker.skills || []).join(", ") || "None recorded")}</p><p><strong>Services</strong><br>${esc((worker.services || []).join(", ") || "None recorded")}</p><div class="ops-actions"><button class="button button--secondary" data-edit-worker type="button">Edit</button><button class="button button--secondary" data-toggle-worker type="button">${worker.active ? "Mark inactive" : "Mark active"}</button><button class="button button--secondary" data-availability="${worker.availabilityStatus === "AVAILABLE" ? "BUSY" : "AVAILABLE"}" type="button">Set ${worker.availabilityStatus === "AVAILABLE" ? "busy" : "available"}</button></div>`;
 }
 
-function renderCategories() {
-  const rows = state.categories.map((category) => [
-    escapeHtml(category.name),
-    escapeHtml(category.code),
-    category.enabled ? "Enabled" : "Disabled",
-    `<button class="text-action" type="button" data-edit-category="${escapeHtml(category.id)}">Edit</button>
-     <button class="text-action" type="button" data-toggle-category="${escapeHtml(category.id)}">${category.enabled ? "Disable" : "Enable"}</button>`
-  ]);
-  categoryTable.innerHTML = tableMarkup(
-    ["Name", "Code", "Status", "Actions"],
-    rows,
-    "No categories yet."
+function renderCustomers() {
+  const counts = state.jobs.reduce((accumulator, job) => {
+    accumulator[job.customerId] = (accumulator[job.customerId] || 0) + 1;
+    return accumulator;
+  }, {});
+  $("[data-customer-table]").innerHTML = table(
+    ["Name", "Phone", "Email", "Requests", "Created"],
+    state.customers.map((customer) => [esc(customer.name), esc(customer.phone), esc(customer.email), esc(counts[customer.id] || 0), esc(date(customer.createdAt))]),
+    "No customers yet."
   );
 }
 
 function renderReviews() {
-  const rows = state.reviews.map((review) => [
-    escapeHtml(review.reference || review.requestId),
-    `${escapeHtml(review.rating)}/5`,
-    escapeHtml(review.comment),
-    review.hidden ? "Hidden" : "Visible",
-    `<button class="text-action" type="button" data-moderate-review="${escapeHtml(review.id)}" data-moderation-action="${review.hidden ? "restore" : "hide"}">
-      ${review.hidden ? "Restore" : "Hide"}
-    </button>`
-  ]);
-  reviewTable.innerHTML = tableMarkup(
-    ["Job", "Rating", "Comment", "Visibility", "Moderation"],
-    rows,
+  $("[data-review-table]").innerHTML = table(
+    ["Request", "Customer", "Worker", "Rating", "Comment", "Submitted", "Visibility"],
+    state.reviews.map((review) => [
+      `<span>${esc(review.reference || review.requestId)}</span>`,
+      esc(state.customers.find((customer) => customer.id === review.customerId)?.name || "Unknown"),
+      esc(state.jobs.find((job) => job.id === review.requestId)?.assignment?.worker?.name || "Not assigned"),
+      `${esc(review.rating)}/5`,
+      esc(review.comment),
+      esc(date(review.submittedAt)),
+      `<button class="text-action" data-moderate-review="${esc(review.id)}" data-moderation-action="${review.hidden ? "restore" : "hide"}" type="button">${review.hidden ? "Restore" : "Hide"}</button>`
+    ]),
     "No reviews yet."
   );
 }
 
-async function loadAll(jobQuery = {}) {
+function renderCategories() {
+  $("[data-category-table]").innerHTML = table(
+    ["Name", "Code", "Status", "Action"],
+    state.categories.map((category) => [esc(category.name), esc(category.code), esc(category.enabled ? "Enabled" : "Disabled"), `<button class="text-action" data-edit-category="${esc(category.id)}" type="button">Edit</button>`]),
+    "No categories yet."
+  );
+}
+
+async function loadAll(filters = {}) {
   const params = new URLSearchParams();
-  if (jobQuery.q) {
-    params.set("q", jobQuery.q);
-  }
-  if (jobQuery.status) {
-    params.set("status", jobQuery.status);
-  }
+  if (filters.q) params.set("q", filters.q);
+  if (filters.status) params.set("status", filters.status);
   const query = params.toString() ? `?${params}` : "";
-  const [dashboard, jobs, providers, categories, reviews] = await Promise.all([
+  const data = await Promise.all([
     api("/api/admin/dashboard"),
     api(`/api/admin/requests${query}`),
-    api("/api/admin/providers"),
+    api("/api/admin/workers"),
+    api("/api/admin/customers"),
     api("/api/admin/categories"),
     api("/api/admin/reviews")
   ]);
-  state.metrics = dashboard.metrics;
-  state.jobs = jobs.requests;
-  state.providers = providers.providers;
-  state.categories = categories.categories;
-  state.reviews = reviews.reviews;
-  renderMetrics();
+  state.metrics = data[0].metrics;
+  state.jobs = data[1].requests;
+  state.workers = data[2].workers;
+  state.customers = data[3].customers;
+  state.categories = data[4].categories;
+  state.reviews = data[5].reviews;
   renderOverview();
   renderJobs();
-  renderProviders();
-  renderCategories();
+  renderWorkers();
+  renderCustomers();
   renderReviews();
+  renderCategories();
+}
+
+function workerForm(worker = {}) {
+  const form = $("[data-worker-form]");
+  form.hidden = false;
+  form.id.value = worker.id || "";
+  form.name.value = worker.name || "";
+  form.phone.value = worker.phone || "";
+  form.serviceArea.value = worker.serviceArea || "";
+  form.skills.value = (worker.skills || []).join(", ");
+  form.services.value = (worker.services || []).join(", ");
+  form.notes.value = worker.notes || "";
+  $("[data-worker-form-title]").textContent = worker.id ? "Edit worker" : "Add worker";
+  form.name.focus();
 }
 
 document.querySelectorAll("[data-ops-tab]").forEach((button) => {
-  button.addEventListener("click", () => switchTab(button.dataset.opsTab));
+  button.addEventListener("click", () => tab(button.dataset.opsTab));
 });
 
-document.querySelector("[data-admin-logout]").addEventListener("click", async () => {
+$("[data-admin-logout]").addEventListener("click", async () => {
   await api("/api/admin/logout", { method: "POST" });
   window.location.replace("/admin-login.html");
 });
 
-jobFilters.addEventListener("submit", async (event) => {
+$("[data-refresh]").addEventListener("click", () => loadAll().catch((error) => message(errors(error), "error")));
+$("[data-job-filters]").addEventListener("submit", (event) => {
   event.preventDefault();
-  const values = Object.fromEntries(new FormData(jobFilters).entries());
-  await loadAll(values);
+  loadAll(Object.fromEntries(new FormData(event.target))).catch((error) => message(errors(error), "error"));
 });
-
-jobTable.addEventListener("click", (event) => {
+$("[data-job-table]").addEventListener("click", (event) => {
   const button = event.target.closest("[data-select-job]");
-  if (!button) {
-    return;
+  if (button) {
+    state.selectedJobId = button.dataset.selectJob;
+    renderJobDetail();
   }
-  state.selectedJobId = button.dataset.selectJob;
-  renderJobDetail();
 });
-
-jobDetail.addEventListener("submit", async (event) => {
-  const form = event.target.closest("[data-assign-form]");
-  if (!form) {
-    return;
-  }
+$("[data-job-detail]").addEventListener("submit", async (event) => {
+  if (!event.target.matches("[data-schedule-form]")) return;
   event.preventDefault();
-  const values = Object.fromEntries(new FormData(form).entries());
+  const value = Object.fromEntries(new FormData(event.target));
   try {
-    await api(`/api/admin/requests/${state.selectedJobId}/assign`, {
+    await api(`/api/admin/requests/${state.selectedJobId}/schedule`, {
       method: "POST",
-      body: JSON.stringify({
-        providerId: values.providerId,
-        scheduledAt: values.scheduledAt ? new Date(values.scheduledAt).toISOString() : ""
-      })
+      body: JSON.stringify({ scheduledAt: new Date(value.scheduledAt).toISOString() })
     });
-    setMessage("Provider assigned.", "success");
-    await loadAll(Object.fromEntries(new FormData(jobFilters).entries()));
+    message("Job scheduled.", "success");
+    await loadAll();
   } catch (error) {
-    setMessage(describeErrors(error), "error");
+    message(errors(error), "error");
   }
 });
-
-jobDetail.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-job-status]");
-  if (!button) {
-    return;
+$("[data-job-detail]").addEventListener("submit", async (event) => {
+  if (!event.target.matches("[data-assign-form]")) return;
+  event.preventDefault();
+  const value = Object.fromEntries(new FormData(event.target));
+  try {
+    await api(`/api/admin/requests/${state.selectedJobId}/assign-worker`, {
+      method: "POST",
+      body: JSON.stringify({ workerId: value.workerId })
+    });
+    message("Worker assigned.", "success");
+    await loadAll();
+  } catch (error) {
+    message(errors(error), "error");
   }
+});
+$("[data-job-detail]").addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-job-status]");
+  if (!button) return;
+  button.disabled = true;
   try {
     await api(`/api/admin/requests/${state.selectedJobId}/status`, {
       method: "POST",
       body: JSON.stringify({ status: button.dataset.jobStatus })
     });
-    setMessage(`Status updated to ${button.dataset.jobStatus}.`, "success");
-    await loadAll(Object.fromEntries(new FormData(jobFilters).entries()));
-  } catch (error) {
-    setMessage(describeErrors(error), "error");
-  }
-});
-
-providerTable.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-select-provider]");
-  if (!button) {
-    return;
-  }
-  state.selectedProviderId = button.dataset.selectProvider;
-  renderProviderDetail();
-});
-
-providerDetail.addEventListener("click", async (event) => {
-  const button = event.target.closest("[data-provider-state]");
-  if (!button) {
-    return;
-  }
-  try {
-    await api(`/api/admin/providers/${state.selectedProviderId}/state`, {
-      method: "POST",
-      body: JSON.stringify({ state: button.dataset.providerState })
-    });
-    setMessage(`Provider set to ${button.dataset.providerState}.`, "success");
+    message("Request status updated.", "success");
     await loadAll();
   } catch (error) {
-    setMessage(describeErrors(error), "error");
+    message(errors(error), "error");
+    button.disabled = false;
   }
 });
-
-categoryForm.addEventListener("submit", async (event) => {
+$("[data-worker-table]").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-select-worker]");
+  if (button) {
+    state.selectedWorkerId = button.dataset.selectWorker;
+    renderWorkerDetail();
+  }
+});
+$("[data-new-worker]").addEventListener("click", () => workerForm());
+$("[data-cancel-worker]").addEventListener("click", () => {
+  $("[data-worker-form]").hidden = true;
+});
+$("[data-worker-detail]").addEventListener("click", async (event) => {
+  const worker = state.workers.find((item) => item.id === state.selectedWorkerId);
+  if (!worker) return;
+  try {
+    if (event.target.closest("[data-edit-worker]")) return workerForm(worker);
+    if (event.target.closest("[data-toggle-worker]")) await api(`/api/admin/workers/${worker.id}/toggle-active`, { method: "POST" });
+    const availability = event.target.closest("[data-availability]");
+    if (availability) {
+      await api(`/api/admin/workers/${worker.id}/availability`, {
+        method: "POST",
+        body: JSON.stringify({ availabilityStatus: availability.dataset.availability })
+      });
+    }
+    message("Worker updated.", "success");
+    await loadAll();
+  } catch (error) {
+    message(errors(error), "error");
+  }
+});
+$("[data-worker-form]").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const values = Object.fromEntries(new FormData(categoryForm).entries());
+  const value = Object.fromEntries(new FormData(event.target));
   const body = {
-    name: values.name,
-    code: values.code,
-    description: values.description,
-    enabled: Boolean(values.enabled)
+    name: value.name,
+    phone: value.phone,
+    serviceArea: value.serviceArea,
+    notes: value.notes,
+    skills: value.skills.split(",").map((item) => item.trim()).filter(Boolean),
+    services: value.services.split(",").map((item) => item.trim()).filter(Boolean)
   };
-  const path = values.id ? `/api/admin/categories/${values.id}` : "/api/admin/categories";
   try {
-    await api(path, { method: "POST", body: JSON.stringify(body) });
-    categoryForm.reset();
-    categoryForm.id.value = "";
-    document.querySelector("[data-category-form-title]").textContent = "Create category";
-    setMessage("Category saved.", "success");
+    await api(value.id ? `/api/admin/workers/${value.id}` : "/api/admin/workers", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+    event.target.hidden = true;
+    message("Worker saved.", "success");
     await loadAll();
   } catch (error) {
-    setMessage(describeErrors(error), "error");
+    message(errors(error), "error");
   }
 });
-
-document.querySelector("[data-category-reset]").addEventListener("click", () => {
-  categoryForm.reset();
-  categoryForm.id.value = "";
-  document.querySelector("[data-category-form-title]").textContent = "Create category";
-});
-
-categoryTable.addEventListener("click", async (event) => {
-  const editButton = event.target.closest("[data-edit-category]");
-  const toggleButton = event.target.closest("[data-toggle-category]");
-  if (editButton) {
-    const category = state.categories.find((item) => item.id === editButton.dataset.editCategory);
-    if (!category) {
-      return;
-    }
-    categoryForm.id.value = category.id;
-    categoryForm.name.value = category.name;
-    categoryForm.code.value = category.code;
-    categoryForm.description.value = category.description;
-    categoryForm.enabled.checked = category.enabled;
-    document.querySelector("[data-category-form-title]").textContent = "Edit category";
-  }
-  if (toggleButton) {
-    try {
-      await api(`/api/admin/categories/${toggleButton.dataset.toggleCategory}/toggle`, { method: "POST" });
-      await loadAll();
-    } catch (error) {
-      setMessage(describeErrors(error), "error");
-    }
-  }
-});
-
-reviewTable.addEventListener("click", async (event) => {
+$("[data-review-table]").addEventListener("click", async (event) => {
   const button = event.target.closest("[data-moderate-review]");
-  if (!button) {
-    return;
-  }
+  if (!button) return;
   try {
     await api(`/api/admin/reviews/${button.dataset.moderateReview}/moderate`, {
       method: "POST",
       body: JSON.stringify({ action: button.dataset.moderationAction })
     });
-    setMessage("Moderation recorded. Original rating and comment are unchanged.", "success");
+    message("Review moderation updated.", "success");
     await loadAll();
   } catch (error) {
-    setMessage(describeErrors(error), "error");
+    message(errors(error), "error");
   }
+});
+$("[data-category-form]").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const value = Object.fromEntries(new FormData(event.target));
+  try {
+    await api(value.id ? `/api/admin/categories/${value.id}` : "/api/admin/categories", {
+      method: "POST",
+      body: JSON.stringify({ name: value.name, code: value.code, description: value.description, enabled: Boolean(value.enabled) })
+    });
+    event.target.reset();
+    event.target.id.value = "";
+    message("Category saved.", "success");
+    await loadAll();
+  } catch (error) {
+    message(errors(error), "error");
+  }
+});
+$("[data-category-table]").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-edit-category]");
+  if (!button) return;
+  const category = state.categories.find((item) => item.id === button.dataset.editCategory);
+  const form = $("[data-category-form]");
+  form.id.value = category.id;
+  form.name.value = category.name;
+  form.code.value = category.code;
+  form.description.value = category.description;
+  form.enabled.checked = category.enabled;
+  $("[data-category-form-title]").textContent = "Edit category";
 });
 
 async function bootstrap() {
   try {
     const session = await api("/api/admin/me");
-    state.admin = session.admin;
-    adminName.textContent = session.admin.name;
+    $("[data-admin-name]").textContent = session.admin.name;
     await loadAll();
   } catch (error) {
-    window.location.replace("/admin-login.html");
+    if (error.status === 401 || error.status === 403) {
+      window.location.replace("/admin-login.html");
+      return;
+    }
+    message("The operations dashboard could not be loaded. Please try again.", "error");
   }
 }
 

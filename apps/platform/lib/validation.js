@@ -167,6 +167,25 @@ function validateStatus(body) {
   };
 }
 
+function validateSchedule(body) {
+  const errors = {};
+  const scheduledAt = requireField(errors, body, "scheduledAt", "Scheduled date and time", 80);
+  const parsed = scheduledAt ? new Date(scheduledAt) : null;
+
+  if (scheduledAt && Number.isNaN(parsed.getTime())) {
+    errors.scheduledAt = "Enter a valid scheduled date and time.";
+  } else if (parsed && parsed.getTime() <= Date.now()) {
+    errors.scheduledAt = "Choose a future scheduled date and time.";
+  }
+
+  return {
+    errors,
+    value: {
+      scheduledAt: parsed ? parsed.toISOString() : scheduledAt
+    }
+  };
+}
+
 function validateReview(body) {
   const errors = {};
   const rating = Number(body.rating);
@@ -327,5 +346,6 @@ module.exports = {
   validateRegistration,
   validateRequest,
   validateReview,
+  validateSchedule,
   validateStatus
 };

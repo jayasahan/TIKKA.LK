@@ -7,10 +7,13 @@ const dist = path.join(root, "dist");
 const files = [
   "index.html",
   "app.html",
+  "admin-login.html",
+  "admin.html",
   "provider.html",
   "styles.css",
   "script.js",
   "app.js",
+  "admin.js",
   "provider.js",
   "server.js",
   "package.json"
