@@ -15,7 +15,7 @@ const files = [
   "server.js",
   "package.json"
 ];
-const serverDirectories = ["lib"];
+const serverDirectories = ["lib", "db"];
 const directories = ["public", "data"];
 
 fs.rmSync(dist, { recursive: true, force: true });

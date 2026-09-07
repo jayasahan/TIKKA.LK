@@ -23,7 +23,9 @@ const checks = [
   ["server.js", /duplicate/, "review submission must prevent duplicates"],
   ["server.js", /requireProvider/, "provider routes must require provider authentication"],
   ["server.js", /providerId === auth\.provider\.id/, "provider jobs must be scoped to the assigned provider"],
-  ["server.js", /Only approved providers can be assigned jobs/, "assignment must require approved providers"]
+  ["server.js", /Only approved providers can be assigned jobs/, "assignment must require approved providers"],
+  ["lib/postgres.js", /new Pool/, "PostgreSQL module must use pg connection pooling"],
+  ["db/migrations/001_initial_schema.sql", /CREATE TABLE IF NOT EXISTS service_requests/, "initial migration must create service requests"]
 ];
 
 let failed = false;

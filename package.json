@@ -12,7 +12,9 @@
     "typecheck": "npm --workspace apps/platform run typecheck",
     "lint": "npm --workspace apps/platform run lint",
     "test": "npm --workspace apps/platform test",
-    "build": "npm --workspace apps/platform run build"
+    "build": "npm --workspace apps/platform run build",
+    "db:migrate": "npm --workspace apps/platform run db:migrate",
+    "db:seed": "npm --workspace apps/platform run db:seed"
   },
   "license": "UNLICENSED"
 }

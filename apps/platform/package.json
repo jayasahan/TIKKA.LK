@@ -5,10 +5,12 @@
   "description": "TIKKA MVP static frontend and minimal Node backend.",
   "scripts": {
     "start": "node server.js",
-    "typecheck": "node --check scripts/build.js && node --check scripts/lint.js && node --check scripts/test.js && node --check script.js && node --check app.js && node --check provider.js && node --check server.js && node --check lib/auth.js && node --check lib/constants.js && node --check lib/db.js && node --check lib/validation.js",
+    "typecheck": "node --check scripts/build.js && node --check scripts/lint.js && node --check scripts/test.js && node --check scripts/db-migrate.js && node --check scripts/db-seed.js && node --check script.js && node --check app.js && node --check provider.js && node --check server.js && node --check lib/auth.js && node --check lib/constants.js && node --check lib/db.js && node --check lib/postgres.js && node --check lib/validation.js",
     "lint": "node scripts/lint.js",
     "test": "node scripts/test.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "db:migrate": "node scripts/db-migrate.js",
+    "db:seed": "node scripts/db-seed.js"
   },
   "keywords": [
     "tikka",
@@ -19,6 +21,7 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "pg": "^8.23.0"
   }
 }
