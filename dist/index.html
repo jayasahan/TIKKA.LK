@@ -9,9 +9,21 @@
     >
     <title>TIKKA | Someone for every job</title>
     <link rel="preload" href="public/brand/tikka-logo.jpg" as="image">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+
+    <!-- Page loader -->
+    <div class="page-loader" id="page-loader" aria-hidden="true">
+      <div class="page-loader__inner">
+        <img src="public/brand/tikka-logo.jpg" alt="" class="page-loader__logo">
+        <div class="page-loader__bar"><div class="page-loader__fill"></div></div>
+      </div>
+    </div>
+
     <a class="skip-link" href="#main">Skip to content</a>
 
     <header class="site-header" data-header>
@@ -41,41 +53,135 @@
         </div>
 
           <a class="button button--primary nav-cta" href="app.html#request">Get a Job Done</a>
+          <a class="nav-hotline" href="tel:0763774551" aria-label="Call TIKKA hotline">📞 076 377 4551</a>
       </nav>
     </header>
 
     <main id="main">
-      <section class="hero section" id="home">
+      <section class="hero" id="home">
         <div class="hero__inner container">
+
+          <!-- LEFT: Copy -->
           <div class="hero__content">
-            <p class="eyebrow">ඕනි වැඩකට</p>
-            <h1>TIKKA</h1>
-            <p class="hero__tagline">Someone for every job.</p>
+            <p class="eyebrow">ඕනි වැඩකට &mdash; Sri Lanka</p>
+            <h1 class="hero__headline">
+              Need a
+              <span class="hero__rotating-wrap" aria-live="polite" aria-atomic="true">
+                <span class="hero__word" id="hero-word">Plumber</span>
+              </span>
+              <br>right now?
+            </h1>
             <p class="hero__copy">
-              Find qualified skilled people for repairs, cleaning, maintenance and everyday jobs.
+              TIKKA connects you with qualified, vetted skilled people for any home or workplace job &mdash; fast, hassle-free, and at transparent rates.
             </p>
+            <div class="hero__trust">
+              <span class="hero__trust-item">✓ Vetted Providers</span>
+              <span class="hero__trust-item">✓ Hassle-Free</span>
+              <span class="hero__trust-item">✓ Transparent Fees</span>
+            </div>
+            <a class="hero__hotline" href="tel:0763774551" aria-label="Call TIKKA on 076 377 4551">
+              <span class="hero__hotline-icon">📞</span>
+              <span class="hero__hotline-num">076 377 4551</span>
+              <span class="hero__hotline-label">Call us now</span>
+            </a>
             <div class="hero__actions" aria-label="Primary actions">
-              <a class="button button--primary" href="app.html#request">Get a Job Done</a>
-              <a class="button button--secondary" href="provider.html#register">Become a Service Provider</a>
+              <a class="button button--primary" href="app.html#request" id="hero-cta-primary">Get a Job Done</a>
+              <a class="button button--secondary" href="provider.html#register" id="hero-cta-secondary">Become a Provider</a>
             </div>
           </div>
 
-          <div class="hero__visual" aria-label="TIKKA service promise">
-            <div class="brand-card glass-panel">
-              <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
-              <div>
-                <p>Qualified skilled people.</p>
-                <p>Hassle-free service.</p>
-                <p>Transparent fees.</p>
+          <!-- RIGHT: Photo deck -->
+          <div class="hero__deck-wrap">
+            <div
+              class="hero-deck"
+              id="hero-deck"
+              role="region"
+              aria-label="Service examples"
+              aria-roledescription="carousel"
+            >
+              <div class="hero-deck__track" id="hero-deck-track">
+
+                <div class="hero-deck__slide" data-slide="0" aria-hidden="false">
+                  <img src="public/hero/plumbing.jpg" alt="Professional plumber at work" loading="eager">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">🔧</span>
+                    <span>Plumbing</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="1" aria-hidden="true">
+                  <img src="public/hero/electrical.jpg" alt="Electrician installing a switch" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">⚡</span>
+                    <span>Electrical</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="2" aria-hidden="true">
+                  <img src="public/hero/cleaning.jpg" alt="Cleaner mopping a living room" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">🧹</span>
+                    <span>Cleaning</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="3" aria-hidden="true">
+                  <img src="public/hero/repairs.jpg" alt="Handyman drilling a wall" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">🔨</span>
+                    <span>Repairs</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="4" aria-hidden="true">
+                  <img src="public/hero/painting.jpg" alt="Painter rolling a wall" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">🎨</span>
+                    <span>Painting</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="5" aria-hidden="true">
+                  <img src="public/hero/handyman.jpg" alt="Handyman assembling furniture" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">🛠️</span>
+                    <span>Handyman</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="6" aria-hidden="true">
+                  <img src="public/hero/moving.jpg" alt="Movers carrying boxes" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">📦</span>
+                    <span>Moving</span>
+                  </div>
+                </div>
+
+                <div class="hero-deck__slide" data-slide="7" aria-hidden="true">
+                  <img src="public/hero/gardening.jpg" alt="Gardener trimming a hedge" loading="lazy">
+                  <div class="hero-deck__label">
+                    <span class="hero-deck__emoji">🌿</span>
+                    <span>Gardening</span>
+                  </div>
+                </div>
+
+              </div><!-- /.hero-deck__track -->
+
+              <!-- Dots -->
+              <div class="hero-deck__dots" role="tablist" aria-label="Go to slide" id="hero-deck-dots">
+                <button role="tab" aria-selected="true"  aria-label="Slide 1: Plumbing"   class="hero-deck__dot is-active" data-dot="0"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 2: Electrical" class="hero-deck__dot" data-dot="1"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 3: Cleaning"  class="hero-deck__dot" data-dot="2"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 4: Repairs"   class="hero-deck__dot" data-dot="3"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 5: Painting"  class="hero-deck__dot" data-dot="4"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 6: Handyman"  class="hero-deck__dot" data-dot="5"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 7: Moving"    class="hero-deck__dot" data-dot="6"></button>
+                <button role="tab" aria-selected="false" aria-label="Slide 8: Gardening" class="hero-deck__dot" data-dot="7"></button>
               </div>
-            </div>
-            <div class="service-strip" aria-hidden="true">
-              <span>Repairs</span>
-              <span>Cleaning</span>
-              <span>Plumbing</span>
-              <span>Electrical</span>
-            </div>
-          </div>
+
+            </div><!-- /.hero-deck -->
+          </div><!-- /.hero__deck-wrap -->
+
         </div>
       </section>
 
@@ -236,7 +342,8 @@
         </div>
         <div>
           <h2>Contact</h2>
-          <p>Contact details coming soon.</p>
+          <a class="footer-hotline" href="tel:0763774551" aria-label="Call TIKKA hotline">076 377 4551</a>
+          <p>Hotline &mdash; Mon to Sat, 8am &ndash; 8pm</p>
         </div>
       </div>
       <div class="container footer-bottom">
