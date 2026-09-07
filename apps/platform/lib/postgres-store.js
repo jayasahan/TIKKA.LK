@@ -167,6 +167,7 @@ class PostgresStore {
   constructor(pool = getPool()) {
     this.pool = pool;
     this.path = "postgres";
+    this.admin = null;
   }
 
   async query(text, params) {
@@ -206,6 +207,30 @@ class PostgresStore {
     throw new Error("PostgreSQL store does not support synchronous JSON-style mutation updates.");
   }
 
+  async ensureConfiguredAdmin(credentials, helpers) {
+    if (!credentials) {
+      this.admin = null;
+      return null;
+    }
+    this.admin = {
+      id: "admin-env",
+      name: "TIKKA Admin",
+      email: credentials.email,
+      passwordHash: helpers.hashPassword(credentials.password),
+      role: "admin",
+      createdAt: null
+    };
+    return this.admin;
+  }
+
+  async findAdminByEmail(email) {
+    return this.admin && this.admin.email === email ? this.admin : null;
+  }
+
+  async findAdminById(id) {
+    return this.admin && this.admin.id === id ? this.admin : null;
+  }
+
   async listCategories({ enabledOnly = false } = {}) {
     const result = await this.query(
       `SELECT * FROM service_categories WHERE ($1::boolean = false OR enabled = true) ORDER BY name`,
@@ -224,7 +249,23 @@ class PostgresStore {
     return categoryFromRow(result.rows[0]);
   }
 
+  async findCategoryByCode(code) {
+    const result = await this.query("SELECT * FROM service_categories WHERE code = $1", [code]);
+    return categoryFromRow(result.rows[0]);
+  }
+
   async createCategory(value) {
+    const code = value.code || value.name.slice(0, 2).toUpperCase();
+    const [existingName, existingCode] = await Promise.all([
+      this.findCategoryByName(value.name),
+      this.findCategoryByCode(code)
+    ]);
+    if (existingName) {
+      throw duplicateError("name", "This category already exists.");
+    }
+    if (existingCode) {
+      throw duplicateError("code", "This category already exists.");
+    }
     try {
       const result = await this.query(
         `
@@ -235,8 +276,8 @@ class PostgresStore {
         [
           createId("category"),
           value.name,
-          value.code || value.name.slice(0, 2).toUpperCase(),
-          value.icon || value.code || value.name.slice(0, 2).toUpperCase(),
+          code,
+          value.icon || code,
           value.description,
           value.enabled
         ]
@@ -250,7 +291,22 @@ class PostgresStore {
     }
   }
 
-  async updateCategory(id, value) {
+  async updateCategory(id, value, options = {}) {
+    const current = await this.findCategoryById(id);
+    if (!current) {
+      throw notFoundError("Category not found.");
+    }
+    const code = value.code || current.code;
+    const [existingName, existingCode] = await Promise.all([
+      this.findCategoryByName(value.name),
+      this.findCategoryByCode(code)
+    ]);
+    if (existingName && existingName.id !== id) {
+      throw duplicateError("name", "This category already exists.");
+    }
+    if (existingCode && existingCode.id !== id) {
+      throw duplicateError("code", "This category already exists.");
+    }
     const result = await this.query(
       `
         UPDATE service_categories
@@ -263,7 +319,14 @@ class PostgresStore {
         WHERE id = $1
         RETURNING *
       `,
-      [id, value.name, value.code, value.icon || value.code, value.description, value.enabled]
+      [
+        id,
+        value.name,
+        code,
+        value.icon || current.icon,
+        value.description,
+        options.hasEnabled ? value.enabled : current.enabled
+      ]
     );
     return categoryFromRow(result.rows[0]);
   }
@@ -296,6 +359,10 @@ class PostgresStore {
   async findCustomerById(id) {
     const result = await this.query("SELECT * FROM customers WHERE id = $1", [id]);
     return customerFromRow(result.rows[0]);
+  }
+
+  async getCustomerById(id) {
+    return this.findCustomerById(id);
   }
 
   async listCustomers() {
@@ -357,6 +424,10 @@ class PostgresStore {
   async findProviderById(id, client = this.pool) {
     const providers = await this.providerSelect(client, "WHERE p.id = $1", [id]);
     return providers[0] || null;
+  }
+
+  async getProviderById(id) {
+    return this.findProviderById(id);
   }
 
   async findProviderByEmail(email) {
@@ -621,6 +692,13 @@ class PostgresStore {
         [requestId, providerId, from, to]
       );
       if (!result.rows[0]) {
+        const jobResult = await client.query(
+          "SELECT id FROM service_requests WHERE id = $1 AND provider_id = $2",
+          [requestId, providerId]
+        );
+        if (!jobResult.rows[0]) {
+          throw notFoundError("Assigned job not found.");
+        }
         throw conflictError("Invalid job transition for this provider.");
       }
       if (to === "COMPLETED") {
