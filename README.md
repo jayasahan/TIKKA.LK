@@ -34,3 +34,20 @@ Local environment configuration can be placed in a root `.env` file based on `.e
 - Data: JSON-file prototype storage under `apps/platform/storage/`.
 - Configuration: root `.env` loaded with `dotenv`; `.env.example` documents safe placeholders.
 - Package management: npm workspaces with the deployable platform app in `apps/platform/`.
+
+
+
+
+
+example account
+
+user
+0706902135
+user@gmail.com
+12345678
+
+
+provider
+0706902137
+provider@gmail.com
+12345678
