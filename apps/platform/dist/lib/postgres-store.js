@@ -119,6 +119,16 @@ function conflictError(message, current) {
   return error;
 }
 
+function logDatabaseError(error) {
+  const safeFields = {};
+  for (const field of ["code", "name", "message", "constraint", "table", "column"]) {
+    if (error && error[field] !== undefined) {
+      safeFields[field] = error[field];
+    }
+  }
+  console.error("PostgreSQL operation failed:", safeFields);
+}
+
 async function transaction(pool, callback) {
   const client = await pool.connect();
   try {
@@ -127,11 +137,12 @@ async function transaction(pool, callback) {
     await client.query("COMMIT");
     return result;
   } catch (error) {
+    logDatabaseError(error);
     await client.query("ROLLBACK");
     if (error.code === "23505") {
       throw duplicateError("unknown", "Record already exists.");
     }
-    throw error;
+    throw new Error("Database operation failed.");
   } finally {
     client.release();
   }
@@ -148,6 +159,7 @@ class PostgresStore {
     try {
       return await this.pool.query(text, params);
     } catch (error) {
+      logDatabaseError(error);
       if (error.code === "23505") {
         throw duplicateError("unknown", "Record already exists.");
       }
