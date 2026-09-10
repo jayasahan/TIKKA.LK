@@ -7,7 +7,6 @@ dist/
 # Environment
 .env
 .env.*
-!.env.example
 
 # Runtime storage
 storage/*.json
