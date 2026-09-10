@@ -12,7 +12,7 @@ The current MVP is a managed operations platform for customers and TIKKA staff. 
 
 ## Local Startup
 
-From the repository root:
+From the repository root(run these):
 
 ```powershell
 cmd /c npm install
