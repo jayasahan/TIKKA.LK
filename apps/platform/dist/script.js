@@ -42,27 +42,60 @@ if (navToggle && navMenu) {
   });
 }
 
-/* ─── Page Loader ────────────────────────────────────────────────────────────── */
+/* ─── Page Splash ────────────────────────────────────────────────────────────── */
 
-const loader = document.getElementById("page-loader");
+const splash = document.getElementById("page-splash");
 
-if (loader) {
-  if (prefersReducedMotion) {
-    // Skip loader instantly for users who prefer no motion
-    loader.classList.add("is-hidden");
-  } else {
-    // Hide after the fill animation completes (1.1s) + a tiny buffer
-    window.addEventListener("load", () => {
-      setTimeout(() => {
-        loader.classList.add("is-hidden");
-      }, 1200);
+if (splash) {
+  const splashStartedAt = performance.now();
+  const minimumVisibleMs = 500;
+  const maximumVisibleMs = 1200;
+  const activeHeroImage = document.querySelector('.hero-deck__slide[aria-hidden="false"] img[src]');
+  let splashHidden = false;
+
+  const waitForActiveHero = () => {
+    if (!activeHeroImage) return Promise.resolve();
+
+    const decode = () => (
+      typeof activeHeroImage.decode === "function"
+        ? activeHeroImage.decode().catch(() => {})
+        : undefined
+    );
+
+    if (activeHeroImage.complete) return decode();
+
+    return new Promise((resolve) => {
+      const finish = () => resolve(decode());
+      activeHeroImage.addEventListener("load", finish, { once: true });
+      activeHeroImage.addEventListener("error", finish, { once: true });
     });
+  };
 
-    // Fallback: always hide after 2.5s even if load is slow
-    setTimeout(() => {
-      loader.classList.add("is-hidden");
-    }, 2500);
-  }
+  const domReady = document.readyState === "loading"
+    ? new Promise((resolve) => document.addEventListener("DOMContentLoaded", resolve, { once: true }))
+    : Promise.resolve();
+
+  const hideSplash = (force = false) => {
+    if (splashHidden) return;
+
+    const elapsed = performance.now() - splashStartedAt;
+    const remaining = force ? 0 : Math.max(0, minimumVisibleMs - elapsed);
+    if (remaining > 0) {
+      window.setTimeout(() => hideSplash(true), remaining);
+      return;
+    }
+
+    splashHidden = true;
+    splash.classList.add("is-hidden");
+    splash.addEventListener("transitionend", () => splash.remove(), { once: true });
+    window.setTimeout(() => splash.remove(), 450);
+  };
+
+  const maximumTimer = window.setTimeout(() => hideSplash(true), maximumVisibleMs);
+  Promise.all([domReady, waitForActiveHero()]).then(() => {
+    window.clearTimeout(maximumTimer);
+    hideSplash();
+  });
 }
 
 /* ─── Hero Deck Carousel ─────────────────────────────────────────────────────── */
@@ -79,6 +112,7 @@ const SERVICES = [
 ];
 
 const INTERVAL_MS = 3000;
+const PRELOAD_LEAD_MS = 1500;
 
 const heroWord  = document.getElementById("hero-word");
 const deckEl    = document.getElementById("hero-deck");
@@ -87,13 +121,41 @@ const dots      = deckEl ? Array.from(deckEl.querySelectorAll(".hero-deck__dot")
 
 if (heroWord && deckEl && slides.length > 0) {
   let currentIndex = 0;
-  let timer        = null;
-  let paused       = false;
+  let rotationTimer = null;
+  let preloadTimer = null;
+  let isPointerOver = false;
+  let isFocusWithin = false;
+  let isInViewport = true;
+  let navigationRequest = 0;
+
+  const loadSlide = (index) => {
+    const image = slides[index]?.querySelector("img");
+    if (!image) return Promise.resolve();
+
+    if (image.dataset.src) {
+      image.src = image.dataset.src;
+      delete image.dataset.src;
+    }
+
+    const loaded = image.complete
+      ? Promise.resolve()
+      : new Promise((resolve) => {
+          image.addEventListener("load", resolve, { once: true });
+          image.addEventListener("error", resolve, { once: true });
+        });
+
+    return loaded.then(() => (
+      typeof image.decode === "function" ? image.decode().catch(() => {}) : undefined
+    ));
+  };
 
   // ── Activate a specific slide ───────────────────────────────────────────────
 
-  const goTo = (nextIndex) => {
+  const goTo = async (nextIndex) => {
     if (nextIndex === currentIndex) return;
+    const request = ++navigationRequest;
+    await loadSlide(nextIndex);
+    if (request !== navigationRequest || nextIndex === currentIndex) return;
 
     // Rotate the headline word
     if (!prefersReducedMotion) {
@@ -102,9 +164,9 @@ if (heroWord && deckEl && slides.length > 0) {
         heroWord.textContent = SERVICES[nextIndex].word;
         heroWord.classList.remove("is-out");
         heroWord.classList.add("is-in");
-        // Force reflow so the class takes effect
-        void heroWord.offsetWidth;
-        heroWord.classList.remove("is-in");
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => heroWord.classList.remove("is-in"));
+        });
       }, 200);
     } else {
       heroWord.textContent = SERVICES[nextIndex].word;
@@ -128,40 +190,81 @@ if (heroWord && deckEl && slides.length > 0) {
 
   // ── Auto-rotate ─────────────────────────────────────────────────────────────
 
-  const startTimer = () => {
-    if (prefersReducedMotion) return;
-    timer = setInterval(next, INTERVAL_MS);
+  const isPaused = () => (
+    prefersReducedMotion ||
+    document.hidden ||
+    !isInViewport ||
+    isPointerOver ||
+    isFocusWithin
+  );
+
+  const clearTimers = () => {
+    clearTimeout(rotationTimer);
+    clearTimeout(preloadTimer);
+    rotationTimer = null;
+    preloadTimer = null;
   };
 
-  const stopTimer = () => {
-    clearInterval(timer);
+  const scheduleRotation = () => {
+    clearTimers();
+    if (isPaused()) return;
+
+    const nextIndex = (currentIndex + 1) % SERVICES.length;
+    preloadTimer = setTimeout(() => {
+      loadSlide(nextIndex);
+    }, INTERVAL_MS - PRELOAD_LEAD_MS);
+    rotationTimer = setTimeout(async () => {
+      await goTo(nextIndex);
+      scheduleRotation();
+    }, INTERVAL_MS);
   };
 
-  startTimer();
+  scheduleRotation();
 
-  // Pause on hover / focus
-  deckEl.addEventListener("mouseenter", () => { paused = true;  stopTimer(); });
-  deckEl.addEventListener("mouseleave", () => { paused = false; startTimer(); });
-  deckEl.addEventListener("focusin",    () => { paused = true;  stopTimer(); });
-  deckEl.addEventListener("focusout",   () => { paused = false; startTimer(); });
+  // Pause on hover / focus, in background tabs, and while outside the viewport.
+  deckEl.addEventListener("mouseenter", () => {
+    isPointerOver = true;
+    scheduleRotation();
+  });
+  deckEl.addEventListener("mouseleave", () => {
+    isPointerOver = false;
+    scheduleRotation();
+  });
+  deckEl.addEventListener("focusin", () => {
+    isFocusWithin = true;
+    scheduleRotation();
+  });
+  deckEl.addEventListener("focusout", (event) => {
+    if (deckEl.contains(event.relatedTarget)) return;
+    isFocusWithin = false;
+    scheduleRotation();
+  });
+
+  document.addEventListener("visibilitychange", scheduleRotation);
+
+  if ("IntersectionObserver" in window) {
+    const observer = new IntersectionObserver(([entry]) => {
+      isInViewport = entry.isIntersecting;
+      scheduleRotation();
+    }, { threshold: 0.1 });
+    observer.observe(deckEl);
+  }
 
   // ── Dot clicks ──────────────────────────────────────────────────────────────
 
   dots.forEach((dot) => {
-    dot.addEventListener("click", () => {
+    dot.addEventListener("click", async () => {
       const idx = Number(dot.dataset.dot);
-      goTo(idx);
-      // Reset timer so the slide doesn't flip immediately after manual pick
-      stopTimer();
-      startTimer();
+      await goTo(idx);
+      scheduleRotation();
     });
   });
 
   // ── Keyboard arrows ─────────────────────────────────────────────────────────
 
-  deckEl.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowRight") { next(); stopTimer(); startTimer(); }
-    if (e.key === "ArrowLeft")  { prev(); stopTimer(); startTimer(); }
+  deckEl.addEventListener("keydown", async (e) => {
+    if (e.key === "ArrowRight") { await next(); scheduleRotation(); }
+    if (e.key === "ArrowLeft")  { await prev(); scheduleRotation(); }
   });
 
   // ── Touch / swipe ────────────────────────────────────────────────────────────
@@ -172,11 +275,10 @@ if (heroWord && deckEl && slides.length > 0) {
     touchStartX = e.changedTouches[0].clientX;
   }, { passive: true });
 
-  deckEl.addEventListener("touchend", (e) => {
+  deckEl.addEventListener("touchend", async (e) => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) < 40) return; // ignore tiny movements
-    if (dx < 0) { next(); } else { prev(); }
-    stopTimer();
-    startTimer();
+    if (dx < 0) { await next(); } else { await prev(); }
+    scheduleRotation();
   }, { passive: true });
 }

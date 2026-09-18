@@ -8,7 +8,6 @@
       content="TIKKA connects customers in Sri Lanka with qualified skilled people for repairs, cleaning, maintenance, and everyday jobs."
     >
     <title>TIKKA | Someone for every job</title>
-    <link rel="preload" href="public/brand/tikka-logo.jpg" as="image">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap" rel="stylesheet">
@@ -16,11 +15,10 @@
   </head>
   <body>
 
-    <!-- Page loader -->
-    <div class="page-loader" id="page-loader" aria-hidden="true">
-      <div class="page-loader__inner">
-        <img src="public/brand/tikka-logo.jpg" alt="" class="page-loader__logo">
-        <div class="page-loader__bar"><div class="page-loader__fill"></div></div>
+    <div class="page-splash" id="page-splash" aria-hidden="true">
+      <div class="page-splash__inner">
+        <img src="public/brand/tikka-logo.jpg" alt="" width="140" height="140" class="page-splash__logo">
+        <div class="page-splash__bar" aria-hidden="true"><div class="page-splash__fill"></div></div>
       </div>
     </div>
 
@@ -102,7 +100,14 @@
               <div class="hero-deck__track" id="hero-deck-track">
 
                 <div class="hero-deck__slide" data-slide="0" aria-hidden="false">
-                  <img src="public/hero/plumbing.jpg" alt="Professional plumber at work" loading="eager">
+                  <img
+                    src="public/hero/plumbing.jpg"
+                    alt="Professional plumber at work"
+                    width="896"
+                    height="1200"
+                    loading="eager"
+                    fetchpriority="high"
+                  >
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">🔧</span>
                     <span>Plumbing</span>
@@ -110,7 +115,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="1" aria-hidden="true">
-                  <img src="public/hero/electrical.jpg" alt="Electrician installing a switch" loading="lazy">
+                  <img data-src="public/hero/electrical.jpg" alt="Electrician installing a switch" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">⚡</span>
                     <span>Electrical</span>
@@ -118,7 +123,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="2" aria-hidden="true">
-                  <img src="public/hero/cleaning.jpg" alt="Cleaner mopping a living room" loading="lazy">
+                  <img data-src="public/hero/cleaning.jpg" alt="Cleaner mopping a living room" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">🧹</span>
                     <span>Cleaning</span>
@@ -126,7 +131,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="3" aria-hidden="true">
-                  <img src="public/hero/repairs.jpg" alt="Handyman drilling a wall" loading="lazy">
+                  <img data-src="public/hero/repairs.jpg" alt="Handyman drilling a wall" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">🔨</span>
                     <span>Repairs</span>
@@ -134,7 +139,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="4" aria-hidden="true">
-                  <img src="public/hero/painting.jpg" alt="Painter rolling a wall" loading="lazy">
+                  <img data-src="public/hero/painting.jpg" alt="Painter rolling a wall" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">🎨</span>
                     <span>Painting</span>
@@ -142,7 +147,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="5" aria-hidden="true">
-                  <img src="public/hero/handyman.jpg" alt="Handyman assembling furniture" loading="lazy">
+                  <img data-src="public/hero/handyman.jpg" alt="Handyman assembling furniture" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">🛠️</span>
                     <span>Handyman</span>
@@ -150,7 +155,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="6" aria-hidden="true">
-                  <img src="public/hero/moving.jpg" alt="Movers carrying boxes" loading="lazy">
+                  <img data-src="public/hero/moving.jpg" alt="Movers carrying boxes" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">📦</span>
                     <span>Moving</span>
@@ -158,7 +163,7 @@
                 </div>
 
                 <div class="hero-deck__slide" data-slide="7" aria-hidden="true">
-                  <img src="public/hero/gardening.jpg" alt="Gardener trimming a hedge" loading="lazy">
+                  <img data-src="public/hero/gardening.jpg" alt="Gardener trimming a hedge" width="896" height="1200" loading="lazy">
                   <div class="hero-deck__label">
                     <span class="hero-deck__emoji">🌿</span>
                     <span>Gardening</span>
