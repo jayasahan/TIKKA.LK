@@ -444,11 +444,19 @@ a {
 }
 
 /* Hero hotline */
+.hero__contact-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+}
+
 .hero__hotline {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
-  margin-top: var(--space-5);
+  margin-top: 0;
   padding: 0.85rem 1.4rem;
   background: var(--color-black);
   color: var(--color-white);
@@ -463,6 +471,15 @@ a {
   transform: translateY(-2px);
   box-shadow: 0 14px 36px rgba(0,0,0,0.28);
   text-decoration: none;
+}
+
+.hero__hotline--whatsapp {
+  gap: 0.5rem;
+  padding-inline: 0.75rem;
+}
+
+.hero__hotline--whatsapp .hero__hotline-num {
+  font-size: clamp(1rem, 2vw, 1.15rem);
 }
 
 .hero__hotline-icon {
@@ -490,6 +507,18 @@ a {
 }
 
 /* ─── Hero Deck (Photo Carousel) ───────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .hero__contact-actions .hero__hotline {
+    gap: 0.5rem;
+    max-width: 100%;
+    padding: 0.75rem 1rem;
+  }
+
+  .hero__contact-actions .hero__hotline-num {
+    font-size: 1.15rem;
+  }
+}
 
 .hero__deck-wrap {
   display: flex;

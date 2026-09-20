@@ -6,6 +6,8 @@ const dist = path.join(root, "dist");
 
 const files = [
   "index.html",
+  "robots.txt",
+  "sitemap.xml",
   "app.html",
   "admin-login.html",
   "admin.html",
