@@ -17,31 +17,38 @@
           <img src="public/brand/tikka-logo.jpg" alt="TIKKA logo" width="1600" height="1200">
         </a>
 
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" data-nav-toggle>
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primary-menu" data-nav-toggle hidden>
           <span class="nav-toggle__line"></span>
           <span class="nav-toggle__line"></span>
           <span class="nav-toggle__line"></span>
           <span class="sr-only">Open menu</span>
         </button>
 
-        <div class="nav-menu customer-nav" id="primary-menu" data-nav-menu>
-          <a href="#overview" data-customer-tab="overview">Overview</a>
-          <a href="#request" data-customer-tab="request">Request a Service</a>
-          <a href="#requests" data-customer-tab="requests">My Requests</a>
-          <a href="#profile" data-customer-tab="profile">Profile</a>
+        <div class="nav-menu customer-nav" id="primary-menu" data-nav-menu hidden>
+          <a class="customer-nav__request" href="#request" data-customer-tab="request" data-nav-item>Request a Service</a>
+          <a href="#overview" data-customer-tab="overview" data-nav-item>Overview</a>
+          <a href="#requests" data-customer-tab="requests" data-nav-item>My Requests</a>
+          <a href="#profile" data-customer-tab="profile" data-nav-item>Profile</a>
+          <button class="customer-nav__logout" type="button" data-logout-menu data-nav-item>Log out</button>
         </div>
 
-        <button class="button button--secondary nav-cta" type="button" data-logout hidden>Log out</button>
+        <a class="button button--primary nav-cta customer-nav__desktop-request" href="#request" data-customer-tab="request" hidden>Request a Service</a>
+        <button class="button button--secondary nav-account-logout" type="button" data-logout hidden>Log out</button>
       </nav>
     </header>
 
     <main id="main">
-      <section class="customer-loading section" data-loading-state>
+      <section class="customer-loading section" data-loading-state aria-busy="true" aria-label="Loading customer portal">
         <div class="container">
-          <div class="form-card">
+          <div class="form-card card card--elevated">
             <p class="eyebrow">TIKKA Customer Portal</p>
-            <h1>Loading your account...</h1>
-            <p class="muted">Checking your session and services.</p>
+            <h1 class="sr-only">Loading your account</h1>
+            <p class="sr-only">Checking your session and services.</p>
+            <div class="customer-loading__layout" aria-hidden="true">
+              <div class="skeleton skeleton--summary"><span class="skeleton__line skeleton__line--short"></span><span class="skeleton__line"></span></div>
+              <div class="skeleton skeleton--summary"><span class="skeleton__line skeleton__line--short"></span><span class="skeleton__line"></span></div>
+              <div class="skeleton skeleton--card"><span class="skeleton__line skeleton__line--short"></span><span class="skeleton__line"></span><span class="skeleton__line"></span></div>
+            </div>
           </div>
         </div>
       </section>
@@ -52,35 +59,41 @@
             <p class="eyebrow">Customer Portal</p>
             <h1>Request and track your TIKKA jobs.</h1>
             <p>Sign in to manage service requests, see scheduled visits, confirm completed work, and review your TIKKA service.</p>
+            <a class="text-action customer-auth__back" href="index.html#home">Back to TIKKA home</a>
           </div>
 
           <section class="form-card" aria-labelledby="auth-title">
             <p class="eyebrow">Customer Access</p>
-            <h2 id="auth-title">Sign in or create an account</h2>
-            <form class="auth-form" data-auth-form novalidate>
+            <h2 id="auth-title" data-auth-title>Sign in</h2>
+            <div class="auth-mode" role="group" aria-label="Choose account action">
+              <button class="button button--ghost is-active" type="button" data-auth-mode="login" aria-pressed="true">Sign in</button>
+              <button class="button button--ghost" type="button" data-auth-mode="register" aria-pressed="false">Create account</button>
+            </div>
+            <form class="auth-form" id="customer-auth-form" data-auth-form novalidate>
+              <input type="hidden" name="mode" value="login">
+              <div class="form-error-summary" data-error-summary role="alert" hidden></div>
               <div class="form-grid">
-                <label>
-                  <span>Name <em>for registration</em></span>
-                  <input name="name" autocomplete="name">
+                <label class="field" data-register-field hidden>
+                  <span>Name <em>required</em></span>
+                  <input name="name" autocomplete="name" maxlength="120" required disabled>
                 </label>
-                <label>
-                  <span>Phone <em>for registration</em></span>
-                  <input name="phone" autocomplete="tel">
+                <label class="field" data-register-field hidden>
+                  <span>Phone <em>required</em></span>
+                  <input name="phone" type="tel" autocomplete="tel" maxlength="30" required disabled>
                 </label>
-                <label>
+                <label class="field">
                   <span>Email <em>required</em></span>
                   <input name="email" type="email" autocomplete="email" required>
                 </label>
-                <label>
+                <label class="field">
                   <span>Password <em>required</em></span>
                   <input name="password" type="password" autocomplete="current-password" required minlength="8">
                 </label>
               </div>
               <div class="form-actions">
-                <button class="button button--primary" type="submit" name="mode" value="login">Log in</button>
-                <button class="button button--secondary" type="submit" name="mode" value="register">Create account</button>
+                <button class="button button--primary" type="submit" data-auth-submit>Sign in</button>
               </div>
-              <div class="form-message" data-auth-message role="status"></div>
+              <div class="form-message" data-auth-message role="status" aria-live="polite"></div>
             </form>
           </section>
         </div>
@@ -144,10 +157,11 @@
                 <p class="muted">TIKKA will review your request, schedule the visit, and show your Assigned Technician or team.</p>
             </div>
 
-            <form class="form-card request-form customer-request-form" data-request-form novalidate>
+            <form class="form-card request-form customer-request-form" id="customer-request-form" data-request-form novalidate>
+              <div class="form-error-summary" data-error-summary role="alert" hidden></div>
               <fieldset>
                 <legend>1. Service</legend>
-                <label>
+                <label class="field">
                   <span>Service category <em>required</em></span>
                   <select name="service" required data-service-select>
                     <option value="">Choose a service</option>
@@ -158,17 +172,18 @@
               <fieldset>
                 <legend>2. Job details</legend>
                 <div class="form-grid">
-                  <label>
+                  <label class="field">
                     <span>Job title <em>required</em></span>
                     <input name="title" required maxlength="140" placeholder="Kitchen tap leak">
                   </label>
-                  <label class="form-span">
+                  <label class="field form-span">
                     <span>Job description <em>required</em></span>
                     <textarea name="description" required maxlength="1200" rows="5" placeholder="Tell us what needs to be done."></textarea>
                   </label>
-                  <label class="form-span">
-                    <span>Optional photos <em>optional</em></span>
-                    <input name="photos" type="file" accept="image/*" multiple>
+                  <label class="field form-span">
+                    <span>Photos <em>temporarily unavailable</em></span>
+                    <input name="photos" type="file" accept="image/*" multiple disabled aria-describedby="photos-hint">
+                    <small class="field__hint" id="photos-hint">Photo attachments are not transmitted yet. Please describe the issue in the job description.</small>
                   </label>
                 </div>
               </fieldset>
@@ -176,19 +191,19 @@
               <fieldset>
                 <legend>3. Location and contact</legend>
                 <div class="form-grid">
-                  <label>
+                  <label class="field">
                     <span>Customer name <em>required</em></span>
                     <input name="customerName" required autocomplete="name">
                   </label>
-                  <label>
+                  <label class="field">
                     <span>Phone <em>required</em></span>
-                    <input name="phone" required autocomplete="tel">
+                    <input name="phone" type="tel" required autocomplete="tel" maxlength="30">
                   </label>
-                  <label>
+                  <label class="field">
                     <span>Email <em>required</em></span>
                     <input name="email" type="email" required autocomplete="email">
                   </label>
-                  <label>
+                  <label class="field">
                     <span>Address/location <em>required</em></span>
                     <input name="address" required autocomplete="street-address">
                   </label>
@@ -198,13 +213,14 @@
               <fieldset>
                 <legend>4. Preferred date and time</legend>
                 <div class="form-grid">
-                  <label>
+                  <label class="field">
                     <span>Preferred date <em>required</em></span>
                     <input name="preferredDate" type="date" required>
                   </label>
-                  <label>
+                  <label class="field">
                     <span>Preferred time <em>required</em></span>
-                    <input name="preferredTime" type="time" required>
+                    <input name="preferredTime" type="time" required aria-describedby="preferred-time-hint">
+                    <small class="field__hint" id="preferred-time-hint">Choose the time using Sri Lanka local time.</small>
                   </label>
                 </div>
               </fieldset>
@@ -217,7 +233,7 @@
               <div class="form-actions">
                 <button class="button button--primary" type="submit" data-request-submit>Submit request</button>
               </div>
-              <div class="form-message" data-request-message role="status"></div>
+              <div class="form-message" data-request-message role="status" aria-live="polite"></div>
             </form>
           </div>
         </section>
@@ -230,17 +246,19 @@
                 <h2 id="requests-title">My requests</h2>
               </div>
               <div class="customer-filter" data-request-filters>
-                <button class="is-active" type="button" data-filter="active">Active</button>
-                <button type="button" data-filter="completed">Completed</button>
-                <button type="button" data-filter="closed">Cancelled</button>
-                <button type="button" data-filter="all">All</button>
+                <button class="is-active" type="button" data-filter="active" aria-pressed="true">Active</button>
+                <button type="button" data-filter="completed" aria-pressed="false">Completed</button>
+                <button type="button" data-filter="closed" aria-pressed="false">Cancelled</button>
+                <button type="button" data-filter="all" aria-pressed="false">All</button>
               </div>
             </div>
+            <div class="form-message" data-portal-message role="status" aria-live="polite"></div>
             <div class="customer-request-browser">
               <div class="customer-request-list" data-request-list></div>
-              <aside class="customer-detail-panel" data-request-detail>
+              <aside class="customer-detail-panel card card--detail" data-request-detail>
                 <p class="muted">Select a request to view details.</p>
               </aside>
+              <p class="sr-only" data-request-loading role="status"></p>
             </div>
           </div>
         </section>
@@ -289,7 +307,9 @@
       </div>
     </footer>
 
+    <script src="ui.js" defer></script>
     <script src="script.js" defer></script>
+    <script src="forms.js" defer></script>
     <script src="app.js" defer></script>
   </body>
 </html>

@@ -1,6 +1,7 @@
 /* ─── Helpers ────────────────────────────────────────────────────────────────── */
 
-const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+let prefersReducedMotion = reducedMotionQuery.matches;
 
 /* ─── Nav ────────────────────────────────────────────────────────────────────── */
 
@@ -8,39 +9,19 @@ const navToggle = document.querySelector("[data-nav-toggle]");
 const navMenu = document.querySelector("[data-nav-menu]");
 
 if (navToggle && navMenu) {
-  const label = navToggle.querySelector(".sr-only");
-
-  const closeMenu = () => {
-    navToggle.setAttribute("aria-expanded", "false");
-    navMenu.classList.remove("is-open");
-    document.body.classList.remove("nav-open");
-    if (label) {
-      label.textContent = "Open menu";
-    }
-  };
-
-  navToggle.addEventListener("click", () => {
-    const isOpen = navToggle.getAttribute("aria-expanded") === "true";
-    navToggle.setAttribute("aria-expanded", String(!isOpen));
-    navMenu.classList.toggle("is-open", !isOpen);
-    document.body.classList.toggle("nav-open", !isOpen);
-    if (label) {
-      label.textContent = isOpen ? "Open menu" : "Close menu";
-    }
-  });
-
-  navMenu.addEventListener("click", (event) => {
-    if (event.target instanceof HTMLAnchorElement) {
-      closeMenu();
-    }
-  });
-
-  window.addEventListener("keydown", (event) => {
-    if (event.key === "Escape") {
-      closeMenu();
-    }
-  });
+  TikkaUI.setupMenu(navToggle, navMenu, { desktopQuery: "(min-width: 1040px)", itemSelector: "[data-nav-item]" });
 }
+
+const publicSectionLinks = Array.from(document.querySelectorAll("[data-nav-menu] a[href^='#']"));
+const syncPublicCurrent = () => {
+  const current = window.location.hash || "#home";
+  publicSectionLinks.forEach((link) => {
+    if (link.getAttribute("href") === current) link.setAttribute("aria-current", "location");
+    else link.removeAttribute("aria-current");
+  });
+};
+syncPublicCurrent();
+window.addEventListener("hashchange", syncPublicCurrent);
 
 /* ─── Page Splash ────────────────────────────────────────────────────────────── */
 
@@ -118,6 +99,7 @@ const heroWord  = document.getElementById("hero-word");
 const deckEl    = document.getElementById("hero-deck");
 const slides    = deckEl ? Array.from(deckEl.querySelectorAll(".hero-deck__slide")) : [];
 const dots      = deckEl ? Array.from(deckEl.querySelectorAll(".hero-deck__dot"))  : [];
+const carouselToggle = deckEl?.querySelector("[data-carousel-toggle]");
 
 if (heroWord && deckEl && slides.length > 0) {
   let currentIndex = 0;
@@ -127,6 +109,16 @@ if (heroWord && deckEl && slides.length > 0) {
   let isFocusWithin = false;
   let isInViewport = true;
   let navigationRequest = 0;
+  let userPaused = prefersReducedMotion;
+  let explicitlyStarted = false;
+
+  const syncCarouselToggle = () => {
+    if (!carouselToggle) return;
+    carouselToggle.textContent = userPaused ? "Play" : "Pause";
+    carouselToggle.setAttribute("aria-label", userPaused ? "Play carousel" : "Pause carousel");
+    carouselToggle.setAttribute("aria-pressed", String(!userPaused));
+  };
+  syncCarouselToggle();
 
   const loadSlide = (index) => {
     const image = slides[index]?.querySelector("img");
@@ -178,9 +170,9 @@ if (heroWord && deckEl && slides.length > 0) {
 
     // Update dots
     dots[currentIndex].classList.remove("is-active");
-    dots[currentIndex].setAttribute("aria-selected", "false");
+    dots[currentIndex].setAttribute("aria-pressed", "false");
     dots[nextIndex].classList.add("is-active");
-    dots[nextIndex].setAttribute("aria-selected", "true");
+    dots[nextIndex].setAttribute("aria-pressed", "true");
 
     currentIndex = nextIndex;
   };
@@ -191,11 +183,12 @@ if (heroWord && deckEl && slides.length > 0) {
   // ── Auto-rotate ─────────────────────────────────────────────────────────────
 
   const isPaused = () => (
-    prefersReducedMotion ||
+    (prefersReducedMotion && !explicitlyStarted) ||
+    userPaused ||
     document.hidden ||
     !isInViewport ||
-    isPointerOver ||
-    isFocusWithin
+    (isPointerOver && !explicitlyStarted) ||
+    (isFocusWithin && !explicitlyStarted)
   );
 
   const clearTimers = () => {
@@ -220,6 +213,21 @@ if (heroWord && deckEl && slides.length > 0) {
   };
 
   scheduleRotation();
+
+  carouselToggle?.addEventListener("click", () => {
+    userPaused = !userPaused;
+    explicitlyStarted = !userPaused;
+    syncCarouselToggle();
+    scheduleRotation();
+  });
+
+  reducedMotionQuery.addEventListener?.("change", (event) => {
+    prefersReducedMotion = event.matches;
+    userPaused = true;
+    explicitlyStarted = false;
+    syncCarouselToggle();
+    scheduleRotation();
+  });
 
   // Pause on hover / focus, in background tabs, and while outside the viewport.
   deckEl.addEventListener("mouseenter", () => {
@@ -263,8 +271,19 @@ if (heroWord && deckEl && slides.length > 0) {
   // ── Keyboard arrows ─────────────────────────────────────────────────────────
 
   deckEl.addEventListener("keydown", async (e) => {
-    if (e.key === "ArrowRight") { await next(); scheduleRotation(); }
-    if (e.key === "ArrowLeft")  { await prev(); scheduleRotation(); }
+    if (e.target.closest("[data-carousel-toggle]")) return;
+    if (e.key === "ArrowRight") {
+      const index = (currentIndex + 1) % SERVICES.length;
+      await goTo(index);
+      dots[index]?.focus();
+      scheduleRotation();
+    }
+    if (e.key === "ArrowLeft") {
+      const index = (currentIndex - 1 + SERVICES.length) % SERVICES.length;
+      await goTo(index);
+      dots[index]?.focus();
+      scheduleRotation();
+    }
   });
 
   // ── Touch / swipe ────────────────────────────────────────────────────────────

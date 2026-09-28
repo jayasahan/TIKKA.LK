@@ -14,7 +14,7 @@ const checks = [
   ["app.html", /aria-label="Primary navigation"/, "customer navigation needs an aria label"],
   ["styles.css", /:focus-visible/, "styles.css must define visible focus states"],
   ["styles.css", /prefers-reduced-motion/, "styles.css must respect reduced motion"],
-  ["script.js", /aria-expanded/, "mobile navigation must update aria-expanded"],
+  ["ui.js", /aria-expanded/, "shared navigation must update aria-expanded"],
   ["server.js", /requireCustomer/, "API must require an authenticated customer"],
   ["server.js", /findCustomerRequestById\([^,]+,\s*auth\.customer\.id\)/, "request access must be scoped to the current customer"],
   ["server.js", /CUSTOMER_CONFIRMABLE_STATUS/, "completion confirmation must enforce status"],

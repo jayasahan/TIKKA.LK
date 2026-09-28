@@ -13,6 +13,8 @@ const files = [
   "admin.html",
   "styles.css",
   "script.js",
+  "forms.js",
+  "ui.js",
   "app.js",
   "admin.js",
   "server.js",

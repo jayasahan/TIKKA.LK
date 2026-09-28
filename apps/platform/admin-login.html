@@ -18,26 +18,38 @@
         <p class="eyebrow">Operations</p>
         <h1>Admin sign in</h1>
         <p>This area is for TIKKA operations. Customer accounts cannot sign in here.</p>
-        <form data-admin-login novalidate>
-          <label>
-            <span>Email</span>
+        <form id="admin-login-form" data-admin-login novalidate>
+          <div class="form-error-summary" data-error-summary role="alert" hidden></div>
+          <label class="field">
+            <span>Email <em>required</em></span>
             <input name="email" type="email" autocomplete="username" required>
           </label>
-          <label>
-            <span>Password</span>
+          <label class="field">
+            <span>Password <em>required</em></span>
             <input name="password" type="password" autocomplete="current-password" required>
           </label>
-          <button class="button button--primary" type="submit">Sign in</button>
-          <p class="form-message" data-admin-login-message></p>
+          <button class="button button--primary" type="submit" data-admin-login-submit>Sign in</button>
+          <p class="form-message" data-admin-login-message role="status" aria-live="polite"></p>
         </form>
+        <a class="text-action ops-login__back" href="index.html#home">Back to TIKKA home</a>
       </section>
     </main>
+    <script src="forms.js"></script>
     <script>
       const form = document.querySelector("[data-admin-login]");
       const message = document.querySelector("[data-admin-login-message]");
+      const submitButton = document.querySelector("[data-admin-login-submit]");
+      TikkaForms.bind(form);
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
+        if (!TikkaForms.validate(form)) {
+          message.textContent = "Please correct the highlighted fields.";
+          message.dataset.tone = "error";
+          return;
+        }
         message.textContent = "Signing in...";
+        message.dataset.tone = "neutral";
+        TikkaForms.setBusy(submitButton, true, "Signing in...");
         try {
           const body = Object.fromEntries(new FormData(form).entries());
           const response = await fetch("/api/admin/login", {
@@ -48,12 +60,17 @@
           });
           const payload = await response.json();
           if (!response.ok) {
-            throw new Error(payload.error || "Sign in failed.");
+            const error = new Error(payload.error || "Sign in failed.");
+            error.payload = payload;
+            throw error;
           }
           window.location.replace("/admin.html");
         } catch (error) {
+          TikkaForms.applyServerErrors(form, error.payload?.errors);
           message.textContent = error.message;
           message.dataset.tone = "error";
+        } finally {
+          TikkaForms.setBusy(submitButton, false);
         }
       });
     </script>

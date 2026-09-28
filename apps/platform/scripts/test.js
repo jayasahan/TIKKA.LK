@@ -13,6 +13,9 @@ const { resetSessions } = require("../lib/auth");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const appHtml = fs.readFileSync(path.join(root, "app.html"), "utf8");
+const appJs = fs.readFileSync(path.join(root, "app.js"), "utf8");
+const uiJs = fs.readFileSync(path.join(root, "ui.js"), "utf8");
+const customerUiCode = `${appJs}\n${uiJs}`;
 const adminHtml = fs.readFileSync(path.join(root, "admin.html"), "utf8");
 const adminJs = fs.readFileSync(path.join(root, "admin.js"), "utf8");
 const buildJs = fs.readFileSync(path.join(root, "scripts", "build.js"), "utf8");
@@ -66,8 +69,13 @@ if (!html.includes("public/brand/tikka-logo.jpg")) {
   failed = true;
 }
 
-if (!css.includes("overflow-x: hidden")) {
-  console.error("Global horizontal overflow guard is missing.");
+if (/(^|\n)body\s*\{[^}]*overflow-x:\s*hidden/s.test(css)) {
+  console.error("Global horizontal overflow masking should not conceal layout defects.");
+  failed = true;
+}
+
+if (!css.includes(".ops-table-wrap { overflow-x: auto; }")) {
+  console.error("Intentional operations table scrolling must stay contained to table regions.");
   failed = true;
 }
 
@@ -104,11 +112,22 @@ for (const requiredCustomerCode of [
   "Request Received",
   "Technician Assigned"
 ]) {
-  const appJs = fs.readFileSync(path.join(root, "app.js"), "utf8");
-  if (!appJs.includes(requiredCustomerCode)) {
+  if (!customerUiCode.includes(requiredCustomerCode)) {
     console.error(`Customer dashboard code is missing: ${requiredCustomerCode}`);
     failed = true;
   }
+}
+
+for (const status of ["NEW", "REVIEWING", "SCHEDULED", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CONFIRMED", "CANCELLED", "REJECTED"]) {
+  if (!uiJs.includes(`${status}:`)) {
+    console.error(`Shared status presentation is missing: ${status}`);
+    failed = true;
+  }
+}
+
+if (uiJs.includes("ACCEPTED")) {
+  console.error("Deprecated ACCEPTED status remains in the shared status presentation.");
+  failed = true;
 }
 
 if (/independent provider|marketplace|assigned provider|service provider/i.test(appHtml)) {
@@ -133,7 +152,7 @@ for (const requiredAdminCode of ["/api/admin/workers", "/assign-worker", "/sched
   }
 }
 
-for (const requiredBuiltAsset of ["admin-login.html", "admin.html", "admin.js"]) {
+for (const requiredBuiltAsset of ["admin-login.html", "admin.html", "admin.js", "forms.js", "ui.js"]) {
   if (!buildJs.includes(`\"${requiredBuiltAsset}\"`)) {
     console.error(`Build is missing admin asset: ${requiredBuiltAsset}`);
     failed = true;
