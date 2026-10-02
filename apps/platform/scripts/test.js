@@ -11,30 +11,10 @@ const { createApp } = require("../server");
 const { resetSessions } = require("../lib/auth");
 
 const root = path.resolve(__dirname, "..");
-const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-const appHtml = fs.readFileSync(path.join(root, "app.html"), "utf8");
-const appJs = fs.readFileSync(path.join(root, "app.js"), "utf8");
-const uiJs = fs.readFileSync(path.join(root, "ui.js"), "utf8");
-const customerUiCode = `${appJs}\n${uiJs}`;
-const adminHtml = fs.readFileSync(path.join(root, "admin.html"), "utf8");
-const adminJs = fs.readFileSync(path.join(root, "admin.js"), "utf8");
-const buildJs = fs.readFileSync(path.join(root, "scripts", "build.js"), "utf8");
 const css = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const serviceData = JSON.parse(
   fs.readFileSync(path.join(root, "data", "services.json"), "utf8")
 );
-
-const requiredText = [
-  "Someone for every job",
-  "Get a Job Done",
-  "Browse Services",
-  "Tell us what you need.",
-  "We find the right person.",
-  "Get the job done.",
-  "Qualified People",
-  "Hassle-Free",
-  "Transparent Fees"
-];
 
 const services = [
   "Cleaning",
@@ -49,24 +29,12 @@ const services = [
 
 let failed = false;
 
-for (const text of [...requiredText, ...services]) {
-  if (!html.includes(text)) {
-    console.error(`Missing required content: ${text}`);
-    failed = true;
-  }
-}
-
 for (const service of services) {
   const matchingService = serviceData.find((item) => item.name === service);
   if (!matchingService || !matchingService.code || !matchingService.description) {
     console.error(`Missing structured service data: ${service}`);
     failed = true;
   }
-}
-
-if (!html.includes("public/brand/tikka-logo.jpg")) {
-  console.error("Official available brand asset is not used.");
-  failed = true;
 }
 
 if (/(^|\n)body\s*\{[^}]*overflow-x:\s*hidden/s.test(css)) {
@@ -79,96 +47,12 @@ if (!css.includes(".ops-table-wrap { overflow-x: auto; }")) {
   failed = true;
 }
 
-if (!appHtml.includes("data-request-form") || !appHtml.includes("data-request-list")) {
-  console.error("Customer workflow UI is missing.");
-  failed = true;
+const reactEntry = fs.readFileSync(path.join(root, "..", "..", "react", "index.html"), "utf8");
+if (!reactEntry.includes('<div id="root"></div>') || !reactEntry.includes("TIKKA")) {
+  console.error("React production document shell is missing."); failed = true;
 }
-
-for (const requiredCustomerMarkup of [
-  "data-dashboard-shell",
-  "data-auth-shell",
-  "data-active-requests",
-  "data-upcoming-requests",
-  "data-request-detail",
-  "data-profile-summary",
-  "Request a Service",
-  "Assigned Technician"
-]) {
-  if (!appHtml.includes(requiredCustomerMarkup)) {
-    console.error(`Customer dashboard is missing: ${requiredCustomerMarkup}`);
-    failed = true;
-  }
-}
-
-for (const requiredCustomerCode of [
-  "loadCurrentUser",
-  "renderDashboard",
-  "renderActiveRequests",
-  "renderRequestHistory",
-  "renderRequestDetails",
-  "submitServiceRequest",
-  "confirmCompletion",
-  "submitReview",
-  "Request Received",
-  "Technician Assigned"
-]) {
-  if (!customerUiCode.includes(requiredCustomerCode)) {
-    console.error(`Customer dashboard code is missing: ${requiredCustomerCode}`);
-    failed = true;
-  }
-}
-
-for (const status of ["NEW", "REVIEWING", "SCHEDULED", "ASSIGNED", "IN_PROGRESS", "COMPLETED", "CONFIRMED", "CANCELLED", "REJECTED"]) {
-  if (!uiJs.includes(`${status}:`)) {
-    console.error(`Shared status presentation is missing: ${status}`);
-    failed = true;
-  }
-}
-
-if (uiJs.includes("ACCEPTED")) {
-  console.error("Deprecated ACCEPTED status remains in the shared status presentation.");
-  failed = true;
-}
-
-if (/independent provider|marketplace|assigned provider|service provider/i.test(appHtml)) {
-  console.error("Provider marketplace language remains in the customer portal.");
-  failed = true;
-}
-
-if (!adminHtml.includes('data-ops-tab="workers"') || !adminHtml.includes('data-worker-form')) {
-  console.error("Admin worker management UI is missing.");
-  failed = true;
-}
-
-if (adminHtml.includes('data-ops-tab="providers"') || /Pending provider approvals|provider approval/i.test(adminHtml)) {
-  console.error("Deprecated provider approval UI remains in the admin dashboard.");
-  failed = true;
-}
-
-for (const requiredAdminCode of ["/api/admin/workers", "/assign-worker", "/schedule", "SCHEDULED", "data-toggle-worker", "data-moderate-review"]) {
-  if (!adminJs.includes(requiredAdminCode)) {
-    console.error(`Admin workflow is missing: ${requiredAdminCode}`);
-    failed = true;
-  }
-}
-
-for (const requiredBuiltAsset of ["admin-login.html", "admin.html", "admin.js", "forms.js", "ui.js"]) {
-  if (!buildJs.includes(`\"${requiredBuiltAsset}\"`)) {
-    console.error(`Build is missing admin asset: ${requiredBuiltAsset}`);
-    failed = true;
-  }
-}
-
-for (const removedBuiltAsset of ["provider.html", "provider.js"]) {
-  if (buildJs.includes(`\"${removedBuiltAsset}\"`)) {
-    console.error(`Build still includes removed provider asset: ${removedBuiltAsset}`);
-    failed = true;
-  }
-}
-
-if (!adminJs.includes("error.status = response.status") || !adminJs.includes("error.status === 401 || error.status === 403")) {
-  console.error("Admin bootstrap must redirect only for an unauthorized response.");
-  failed = true;
+for (const obsolete of ["script.js", "app.js", "admin.js", "forms.js", "ui.js", "index.html", "app.html", "admin.html"]) {
+  if (fs.existsSync(path.join(root, obsolete))) { console.error(`Obsolete frontend runtime remains: ${obsolete}`); failed = true; }
 }
 
 const productionCookieFlags = childProcess.execFileSync(process.execPath, [

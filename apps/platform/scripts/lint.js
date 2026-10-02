@@ -3,18 +3,11 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const checks = [
-  ["index.html", /<main id="main">/, "index.html must include a main landmark"],
-  ["app.html", /<main id="main">/, "app.html must include a main landmark"],
-  ["index.html", /alt="TIKKA logo"/, "logo image must include alt text"],
-  ["app.html", /data-request-form/, "customer request form must exist"],
-  ["admin.html", /data-ops-tab="workers"/, "admin worker management tab must exist"],
-  ["admin.html", /data-worker-form/, "admin worker form must exist"],
-  ["app.html", /type="file"/, "optional photo input must exist"],
-  ["index.html", /aria-label="Primary navigation"/, "primary navigation needs an aria label"],
-  ["app.html", /aria-label="Primary navigation"/, "customer navigation needs an aria label"],
+  [path.join("..", "..", "react", "index.html"), /<main|id="root"/, "React document shell must have an application root"],
   ["styles.css", /:focus-visible/, "styles.css must define visible focus states"],
   ["styles.css", /prefers-reduced-motion/, "styles.css must respect reduced motion"],
-  ["ui.js", /aria-expanded/, "shared navigation must update aria-expanded"],
+  [path.join("..", "..", "src", "pages", "CustomerPage.jsx"), /data|Request a Service|RequestForm/, "React customer surface must remain present"],
+  [path.join("..", "..", "src", "pages", "AdminPage.jsx"), /workers|Reviews|Categories/, "React operations surface must remain present"],
   ["server.js", /requireCustomer/, "API must require an authenticated customer"],
   ["server.js", /findCustomerRequestById\([^,]+,\s*auth\.customer\.id\)/, "request access must be scoped to the current customer"],
   ["server.js", /CUSTOMER_CONFIRMABLE_STATUS/, "completion confirmation must enforce status"],

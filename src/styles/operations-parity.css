@@ -1,0 +1,9 @@
+/* Restore the existing operations shell without changing legacy styles. */
+.react-operations { min-height: 100vh; grid-template-columns: minmax(0, 1fr); }
+.react-operations > .ops-header { grid-column: 1 / -1; }
+.react-operations > .ops-main { min-width: 0; }
+.react-operations .ops-header__title { min-width: 0; overflow-wrap: anywhere; }
+.react-operations .ops-nav-toggle { color: var(--color-white); }
+@media (min-width: 1040px) {
+  .react-operations { grid-template-columns: 190px minmax(0, 1fr); }
+}

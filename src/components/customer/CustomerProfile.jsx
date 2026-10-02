@@ -1,0 +1,5 @@
+import React from "react";
+
+export default function CustomerProfile({ customer, services, onRequestService }) {
+  return <section className="section section--tight" id="profile" aria-labelledby="profile-title"><div className="container customer-profile-grid"><section className="customer-panel"><p className="eyebrow">Profile</p><h2 id="profile-title">Your account</h2><dl className="request-meta"><div><dt>Name</dt><dd>{customer.name}</dd></div><div><dt>Email</dt><dd>{customer.email}</dd></div><div><dt>Phone</dt><dd>{customer.phone}</dd></div></dl><p className="muted">Profile editing is not available yet.</p></section><section className="customer-panel"><p className="eyebrow">Services</p><h2>Browse categories</h2><div className="customer-service-list">{services.map((service) => <article className="customer-service-pill" key={service.name}><span>{service.icon || service.code}</span><div><strong>{service.name}</strong><p>{service.description}</p></div><button className="text-action" type="button" onClick={() => onRequestService(service.name)}>Request</button></article>)}</div></section></div></section>;
+}

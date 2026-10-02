@@ -3,43 +3,13 @@ const path = require("node:path");
 
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
+const serverFiles = ["server.js", "package.json"];
 
-const files = [
-  "index.html",
-  "robots.txt",
-  "sitemap.xml",
-  "app.html",
-  "admin-login.html",
-  "admin.html",
-  "styles.css",
-  "script.js",
-  "forms.js",
-  "ui.js",
-  "app.js",
-  "admin.js",
-  "server.js",
-  "package.json"
-];
-const serverDirectories = ["lib", "db"];
-const directories = ["public", "data"];
-
-fs.rmSync(dist, { recursive: true, force: true });
+// Vite has already produced the sole frontend output in dist/. Add only the
+// Node runtime packaging required when that directory is deployed.
 fs.mkdirSync(dist, { recursive: true });
-
-for (const file of files) {
-  fs.copyFileSync(path.join(root, file), path.join(dist, file));
+for (const file of serverFiles) fs.copyFileSync(path.join(root, file), path.join(dist, file));
+for (const directory of ["lib", "db"]) {
+  fs.cpSync(path.join(root, directory), path.join(dist, directory), { recursive: true, force: true });
 }
-
-for (const directory of directories) {
-  fs.cpSync(path.join(root, directory), path.join(dist, directory), {
-    recursive: true
-  });
-}
-
-for (const directory of serverDirectories) {
-  fs.cpSync(path.join(root, directory), path.join(dist, directory), {
-    recursive: true
-  });
-}
-
-console.log("Build complete: dist/");
+console.log("Build complete: React dist/ plus Node runtime.");

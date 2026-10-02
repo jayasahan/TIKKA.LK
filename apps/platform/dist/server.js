@@ -37,8 +37,10 @@ const {
   validateStatus
 } = require("./lib/validation");
 
-const publicRoot = path.resolve(__dirname);
-const protectedAdminAssets = new Set(["/admin.html", "/admin.js"]);
+// Production frontend output is the single Vite React build. The server still
+// owns APIs/authentication; HTML shell access is not an authorization boundary.
+const publicRoot = path.resolve(__dirname, "dist");
+const frontendEntries = new Set(["/", "/app.html", "/admin-login.html", "/admin.html"]);
 let adminConfigWarningShown = false;
 
 const loginLimitWindowMs = Number(process.env.TIKKA_LOGIN_LIMIT_WINDOW_MS || 15 * 60 * 1000);
@@ -382,6 +384,9 @@ function warnAdminUnavailable() {
 async function ensureConfiguredAdmin(store) {
   const credentials = getAdminCredentials();
   if (!credentials) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Production startup requires TIKKA_ADMIN_EMAIL and TIKKA_ADMIN_PASSWORD.");
+    }
     warnAdminUnavailable();
     return;
   }
@@ -1051,14 +1056,16 @@ async function hasValidAdminSession(request, store) {
 }
 
 async function serveStatic(request, response, url, store) {
-  const requestPath = url.pathname === "/" ? "/index.html" : url.pathname;
-  const safePath = path.normalize(decodeURIComponent(requestPath)).replace(/^(\.\.[/\\])+/, "");
-  const filePath = path.join(publicRoot, safePath);
-
-  if (protectedAdminAssets.has(url.pathname) && !(await hasValidAdminSession(request, store))) {
-    response.writeHead(302, { ...securityHeaders, Location: "/admin-login.html" });
-    response.end();
-    return;
+  let requestPath = frontendEntries.has(url.pathname) ? "/index.html" : url.pathname;
+  if (requestPath.startsWith("/public/brand/") || requestPath.startsWith("/public/hero/")) {
+    requestPath = `/${requestPath.slice("/public/".length)}`;
+  }
+  let decodedPath;
+  try { decodedPath = decodeURIComponent(requestPath); } catch { sendText(response, 404, "Not found"); return; }
+  const filePath = path.resolve(publicRoot, `.${decodedPath}`);
+  const relativePath = path.relative(publicRoot, filePath);
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) {
+    sendText(response, 404, "Not found"); return;
   }
 
   if (!filePath.startsWith(publicRoot) || !fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {

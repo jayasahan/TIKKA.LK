@@ -285,13 +285,28 @@ textarea:disabled,
     background-color var(--motion-duration-fast) var(--motion-ease-standard);
 }
 
-.button:hover {
-  transform: translateY(-2px);
-  text-decoration: none;
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    transform: translateY(-2px);
+    text-decoration: none;
+  }
 }
 
 .button:active {
   transform: translateY(0) scale(0.99);
+}
+
+/* Motion is opt-in so server-rendered and no-script pages never hide content. */
+.motion-ready [data-reveal] {
+  opacity: 0;
+  transform: translateY(0.5rem);
+  transition: opacity var(--motion-duration-panel) var(--motion-ease-standard),
+    transform var(--motion-duration-panel) var(--motion-ease-standard);
+}
+
+.motion-ready [data-reveal].is-revealed {
+  opacity: 1;
+  transform: none;
 }
 
 .button--primary {

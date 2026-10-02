@@ -1,0 +1,2132 @@
+{
+  "browser": "Edg/154.0.4258.48",
+  "reducedMotion": true,
+  "results": [
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 320,
+      "pageWidth": 320,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 8.5,
+        "right": 296.5,
+        "width": 288,
+        "height": 330
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 320,
+      "pageWidth": 320,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 320,
+      "pageWidth": 305,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 8.5,
+        "right": 296.5,
+        "width": 288,
+        "height": 354
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 320,
+      "pageWidth": 320,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ],
+      "screenshot": "react-public-home-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 375,
+      "pageWidth": 375,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ],
+      "screenshot": "react-public-menu-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ],
+      "screenshot": "react-public-services-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ],
+      "screenshot": "react-customer-auth-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-overview-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-form-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-requests-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-detail-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 8.5,
+        "right": 351.5,
+        "width": 343,
+        "height": 294
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-dialog-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 375,
+      "pageWidth": 375,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ],
+      "screenshot": "react-admin-login-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ],
+      "screenshot": "react-admin-overview-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ],
+      "screenshot": "react-admin-requests-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ],
+      "screenshot": "react-admin-detail-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ],
+      "screenshot": "react-admin-workers-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 375,
+      "pageWidth": 360,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 8.5,
+        "right": 351.5,
+        "width": 343,
+        "height": 330
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ],
+      "screenshot": "react-admin-dialog-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 375,
+      "pageWidth": 375,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ],
+      "screenshot": "react-admin-menu-375.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 640,
+      "pageWidth": 640,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 92.5,
+        "right": 532.5,
+        "width": 440,
+        "height": 230
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 640,
+      "pageWidth": 640,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 640,
+      "pageWidth": 625,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 92.5,
+        "right": 532.5,
+        "width": 440,
+        "height": 266
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 640,
+      "pageWidth": 640,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 768,
+      "pageWidth": 768,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 156.5,
+        "right": 596.5,
+        "width": 440,
+        "height": 230
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 768,
+      "pageWidth": 768,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 768,
+      "pageWidth": 768,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 768,
+      "pageWidth": 753,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 768,
+      "pageWidth": 768,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 768,
+      "pageWidth": 768,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 164,
+        "right": 604,
+        "width": 440,
+        "height": 266
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 768,
+      "pageWidth": 768,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 900,
+      "pageWidth": 900,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 222.5,
+        "right": 662.5,
+        "width": 440,
+        "height": 230
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 900,
+      "pageWidth": 900,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 900,
+      "pageWidth": 900,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 900,
+      "pageWidth": 885,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 900,
+      "pageWidth": 900,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 900,
+      "pageWidth": 900,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 230,
+        "right": 670,
+        "width": 440,
+        "height": 266
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 900,
+      "pageWidth": 900,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 284.5,
+        "right": 724.5,
+        "width": 440,
+        "height": 230
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 1024,
+      "pageWidth": 1009,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 292,
+        "right": 732,
+        "width": 440,
+        "height": 266
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 1024,
+      "pageWidth": 1024,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ],
+      "screenshot": "react-public-home-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ],
+      "screenshot": "react-public-menu-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ],
+      "screenshot": "react-public-services-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ],
+      "screenshot": "react-customer-auth-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-overview-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-form-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-requests-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-detail-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 412.5,
+        "right": 852.5,
+        "width": 440,
+        "height": 230
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ],
+      "screenshot": "react-customer-dialog-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ],
+      "screenshot": "react-admin-login-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ],
+      "screenshot": "react-admin-overview-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ],
+      "screenshot": "react-admin-requests-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 1280,
+      "pageWidth": 1265,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ],
+      "screenshot": "react-admin-detail-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ],
+      "screenshot": "react-admin-workers-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 420,
+        "right": 860,
+        "width": 440,
+        "height": 266
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ],
+      "screenshot": "react-admin-dialog-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 1280,
+      "pageWidth": 1280,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ],
+      "screenshot": "react-admin-menu-1280.png"
+    },
+    {
+      "implementation": "react",
+      "screen": "public-home",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-menu",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "public-services",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Need a Plumberright now?",
+        "Everyday help, handled properly.",
+        "Tell TIKKA. We coordinate. You get it done.",
+        "Qualified help without the coordination headache.",
+        "One team coordinating the right technician for every job.",
+        "Start with the job. TIKKA will handle the next step.",
+        "Services",
+        "Navigation",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-auth",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Request and track your TIKKA jobs.",
+        "Sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-overview",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Hi QA Customer, what can TIKKA help with today?",
+        "Active requests",
+        "Upcoming jobs",
+        "Recent completed jobs",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-form",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Tell us what needs to be done.",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-requests",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-detail",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "customer-dialog",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Confirm completed workConfirm only if the TIKKA job has been completed and you a",
+        "left": 492.5,
+        "right": 932.5,
+        "width": 440,
+        "height": 230
+      },
+      "headings": [
+        "My requests",
+        "Kitchen tap repair",
+        "Confirm completed work",
+        "Customer",
+        "Contact"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-login",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Admin sign in"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-overview",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Overview",
+        "Recent requests",
+        "Worker availability"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-requests",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-detail",
+      "width": 1440,
+      "pageWidth": 1425,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs",
+        "Repair cabinet door"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-workers",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Workers"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-dialog",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": {
+        "text": "Deactivate worker QA TechnicianQA Technician will be deactivated and will no lon",
+        "left": 500,
+        "right": 940,
+        "width": 440,
+        "height": 266
+      },
+      "headings": [
+        "Workers",
+        "Deactivate worker QA Technician"
+      ]
+    },
+    {
+      "implementation": "react",
+      "screen": "admin-menu",
+      "width": 1440,
+      "pageWidth": 1440,
+      "images": [],
+      "outside": [],
+      "dialog": null,
+      "headings": [
+        "Requests and jobs"
+      ]
+    }
+  ],
+  "zoom": [
+    {
+      "screen": "public-home",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "public-menu",
+      "width": 640,
+      "pageWidth": 640,
+      "dialog": null
+    },
+    {
+      "screen": "customer-auth",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "customer-form",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "customer-requests",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "customer-detail",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "customer-dialog",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": {
+        "left": 92.5,
+        "right": 532.5,
+        "top": 110,
+        "bottom": 340,
+        "height": 230
+      }
+    },
+    {
+      "screen": "admin-login",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "admin-requests",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "admin-detail",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "admin-workers",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": null
+    },
+    {
+      "screen": "admin-dialog",
+      "width": 640,
+      "pageWidth": 625,
+      "dialog": {
+        "left": 92.5,
+        "right": 532.5,
+        "top": 92,
+        "bottom": 358,
+        "height": 266
+      }
+    },
+    {
+      "screen": "admin-menu",
+      "width": 640,
+      "pageWidth": 640,
+      "dialog": null
+    }
+  ],
+  "unauthenticatedAdminRedirect": true,
+  "zoomMethod": "200% equivalent CSS viewport/device scale, not toolbar zoom"
+}
