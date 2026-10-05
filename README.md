@@ -124,3 +124,15 @@ Login protection is in-memory for the single-instance MVP. The default policy al
 After deployment, verify real PostgreSQL connectivity, CDN HTML invalidation,
 and hashed static asset loading. Those are environment checks, not build-time
 React migration changes.
+
+## CI/CD
+
+GitHub Actions configuration is provided in `.github/workflows/ci-cd.yml`.
+Pull requests and pushes to `main` run the complete verification suite against
+an isolated PostgreSQL service, build the production artifact, and verify the
+production routing contract. Successful pushes to `main` can deploy to the
+protected GitHub `production` environment on Railway.
+
+Deployment is inactive until the required GitHub environment secret and
+variables are configured. See `docs/ci-cd.md` for Railway settings, secret and
+variable names, branch protection, health checks, and rollback instructions.

@@ -1,0 +1,155 @@
+name: CI/CD
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: "true"
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/tikka_ci?sslmode=disable
+      PGSSLMODE: disable
+      TIKKA_ADMIN_EMAIL: ci.admin@example.test
+      TIKKA_ADMIN_PASSWORD: ci-admin-password-not-for-production
+      TIKKA_TEST_BROWSER: /usr/bin/google-chrome
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: tikka_ci
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d tikka_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Apply CI database migrations
+        run: npm run db:migrate
+
+      - name: Seed CI service categories
+        run: npm run db:seed
+
+      - name: Run complete test suite
+        run: npm test
+
+      - name: Build production artifact
+        run: npm run build
+
+      - name: Verify production routing and artifact boundaries
+        run: node apps/platform/scripts/test-react-cutover.js
+
+      - name: Upload production artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: tikka-production-${{ github.sha }}
+          path: apps/platform/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy-production:
+    name: Deploy production
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment:
+      name: production
+      url: ${{ vars.PRODUCTION_URL }}
+    concurrency:
+      group: tikka-production
+      cancel-in-progress: false
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+      RAILWAY_SERVICE_ID: ${{ vars.RAILWAY_SERVICE_ID }}
+      PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+
+    steps:
+      - name: Check out verified source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+
+      - name: Validate deployment configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RAILWAY_TOKEN" || { echo "::error::Missing production secret RAILWAY_TOKEN"; exit 1; }
+          test -n "$RAILWAY_PROJECT_ID" || { echo "::error::Missing production variable RAILWAY_PROJECT_ID"; exit 1; }
+          test -n "$RAILWAY_SERVICE_ID" || { echo "::error::Missing production variable RAILWAY_SERVICE_ID"; exit 1; }
+          case "$PRODUCTION_URL" in
+            https://*) ;;
+            *) echo "::error::PRODUCTION_URL must be an HTTPS URL"; exit 1 ;;
+          esac
+
+      - name: Install pinned Railway CLI
+        run: npm install --global @railway/cli@5.63.1
+
+      - name: Deploy verified main commit to Railway
+        shell: bash
+        run: >-
+          railway up --ci
+          --project "$RAILWAY_PROJECT_ID"
+          --environment production
+          --service "$RAILWAY_SERVICE_ID"
+          --message "GitHub Actions ${GITHUB_SHA}"
+
+      - name: Verify production health
+        shell: bash
+        run: |
+          set -euo pipefail
+          health_url="${PRODUCTION_URL%/}/health"
+          for attempt in $(seq 1 12); do
+            body="$(curl --fail --silent --show-error --max-time 10 "$health_url" || true)"
+            if printf '%s' "$body" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+              echo "Production health check passed."
+              exit 0
+            fi
+            echo "Health check attempt ${attempt}/12 did not pass yet."
+            sleep 10
+          done
+          echo "::error::Production health check failed at ${health_url}"
+          exit 1
