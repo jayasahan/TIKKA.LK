@@ -34,6 +34,35 @@ Local environment configuration can be placed in a root `.env` file based on `.e
 
 The Vite development server proxies `/health` and `/api/*` to the Node server. The production-style Node process serves the compiled React output from `apps/platform/dist/` and owns API routing.
 
+## Testing
+
+Run the complete essential suite from the repository root:
+
+```powershell
+cmd /c npm test
+```
+
+The complete suite includes:
+
+- unit tests for authentication primitives, validation, identifiers, and lifecycle rules;
+- JSON storage adapter contract tests;
+- HTTP API, authorization, CSRF, ownership, validation, and lifecycle contract tests;
+- existing customer/admin/worker integration tests;
+- isolated headless-browser React interaction tests;
+- PostgreSQL storage adapter tests when `DATABASE_URL` is configured.
+
+Individual layers can be run with:
+
+```powershell
+cmd /c npm run test:unit
+cmd /c npm run test:api
+cmd /c npm run test:integration
+cmd /c npm run test:react
+cmd /c npm run test:postgres
+```
+
+The React layer requires an installed Chromium-based browser. Set `TIKKA_TEST_BROWSER` to its executable when it is not available at one of the test runner's standard paths. PostgreSQL tests create uniquely named test records and remove them after the run; they skip when `DATABASE_URL` is not configured or migrations have not been applied.
+
 ## Current Architecture
 
 - Frontend: React, React Router and Vite; one compiled document shell and hashed assets in `apps/platform/dist/`.
