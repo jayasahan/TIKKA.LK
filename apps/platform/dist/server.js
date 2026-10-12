@@ -25,6 +25,7 @@ const {
   OPERATOR_TRANSITIONS
 } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
+const { createUploadSignature, destroyAsset, MAX_UPLOADS, signedDeliveryUrl, validateUploadMetadata } = require("./lib/cloudinary");
 const {
   hasErrors,
   validateCategory,
@@ -268,6 +269,7 @@ function exposeRequest(request, database) {
     preferredTime: request.preferredTime,
     address: request.address || null,
     assignedWorker: sanitizeWorker(worker),
+    photos: (request.photos || []).map((photo) => typeof photo === "string" ? { fileName: photo } : { ...photo, url: signedDeliveryUrl(photo.publicId, photo.format) }),
     review: publicReview(review)
   };
 }
@@ -285,7 +287,7 @@ function exposeAdminRequest(request, database) {
     phone: request.phone,
     email: request.email,
     address: request.address,
-    photos: request.photos || [],
+    photos: (request.photos || []).map((photo) => typeof photo === "string" ? { fileName: photo } : { ...photo, url: signedDeliveryUrl(photo.publicId, photo.format) }),
     assignment: {
       worker: sanitizeWorker((database.workers || []).find((item) => item.id === request.assignedWorkerId)),
       assignedBy: sanitizeAdmin(admin),
@@ -882,6 +884,55 @@ async function handleApi(request, response, store, url) {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/uploads/signature") {
+      const auth = await requireCustomer(request, response, store);
+      if (!auth) return;
+      const pending = (await store.listOrphanAttachments(new Date(Date.now() - 30 * 60 * 1000).toISOString())).filter((item) => item.customerId === auth.customer.id);
+      if (pending.length >= MAX_UPLOADS) {
+        sendJson(response, 400, { error: `You can upload up to ${MAX_UPLOADS} images at a time.` });
+        return;
+      }
+      const uploadId = `upload_${crypto.randomBytes(8).toString("hex")}`;
+      const signature = createUploadSignature(auth.customer.id, uploadId);
+      await store.createAttachment({ id: uploadId, customerId: auth.customer.id, publicId: signature.publicId, fileName: "pending", mimeType: "image/*", bytes: 1 });
+      sendJson(response, 200, { uploadId, ...signature });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/uploads/complete") {
+      const auth = await requireCustomer(request, response, store);
+      if (!auth) return;
+      const body = await readJsonBody(request);
+      const { errors } = validateUploadMetadata(body);
+      if (Object.keys(errors).length) { sendJson(response, 400, { errors }); return; }
+      const pending = await store.findAttachmentForCustomer(body.uploadId, auth.customer.id);
+      if (!pending || pending.publicId !== body.publicId) { sendJson(response, 400, { error: "Upload session does not match this asset." }); return; }
+      const attachment = await store.completeAttachment(body, auth.customer.id);
+      sendJson(response, 200, { attachment });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/uploads/release") {
+      const auth = await requireCustomer(request, response, store);
+      if (!auth) return;
+      const body = await readJsonBody(request);
+      const ids = Array.isArray(body.uploadIds) ? body.uploadIds.slice(0, MAX_UPLOADS) : [];
+      for (const id of ids) {
+        const attachment = await store.findAttachmentForCustomer(id, auth.customer.id);
+        if (attachment && !attachment.serviceRequestId) {
+          try {
+            await destroyAsset(attachment.publicId);
+            await store.removeAttachment(id);
+          } catch (error) {
+            console.error(`Unable to release Cloudinary asset ${attachment.publicId}: ${error.message}`);
+          }
+        }
+      }
+      response.writeHead(204, securityHeaders);
+      response.end();
+      return;
+    }
+
     if (request.method === "POST" && url.pathname === "/api/requests") {
       const auth = await requireCustomer(request, response, store);
       if (!auth) {
@@ -909,6 +960,9 @@ async function handleApi(request, response, store, url) {
         preferredTime: value.preferredTime,
         photos: value.photos
       });
+      if (value.photos.length && value.photos.every((photo) => photo && typeof photo === "object")) {
+        await store.attachAttachments(value.photos.map((photo) => photo.id), created.id, auth.customer.id);
+      }
 
       sendJson(response, 201, {
         message: "Request received.",

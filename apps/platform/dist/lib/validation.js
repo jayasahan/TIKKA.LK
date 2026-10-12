@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { JOB_STATUSES } = require("./constants");
+const { MAX_UPLOADS, validateUploadMetadata } = require("./cloudinary");
 
 const serviceData = JSON.parse(
   fs.readFileSync(path.resolve(__dirname, "..", "data", "services.json"), "utf8")
@@ -103,9 +104,16 @@ function validateRequest(body, categories = serviceData) {
   const address = requireField(errors, body, "address", "Address or location", 400);
   const preferredDate = requireField(errors, body, "preferredDate", "Preferred date", 40);
   const preferredTime = requireField(errors, body, "preferredTime", "Preferred time", 40);
-  const photos = Array.isArray(body.photos)
-    ? body.photos.map(cleanString).filter(Boolean).slice(0, 6)
-    : [];
+  const photos = Array.isArray(body.photos) ? body.photos.slice(0, MAX_UPLOADS).map((photo) => typeof photo === "string" ? cleanString(photo) : photo) : [];
+  photos.forEach((photo, index) => {
+    if (typeof photo === "string") {
+      if (!/^[\w .()\-]+\.(?:jpe?g|png|webp)$/i.test(photo)) errors[`photos.${index}`] = "Invalid photo filename.";
+      return;
+    }
+    const result = validateUploadMetadata(photo);
+    Object.entries(result.errors).forEach(([field, message]) => { errors[`photos.${index}.${field}`] = message; });
+  });
+  if (Array.isArray(body.photos) && body.photos.length > MAX_UPLOADS && body.photos.some((photo) => photo && typeof photo === "object")) errors.photos = `Upload no more than ${MAX_UPLOADS} images.`;
 
   if (service && !allowedServices.includes(service)) {
     errors.service = "Choose one of the available services.";

@@ -200,9 +200,11 @@ async function main() {
     assert(window.location.hash === "#request", "Request destination survives login");
     assert(posts.filter((item) => item.url === "/api/auth/login").length === 1, "One login mutation");
   });
-  await test("Customer request form retains Sri Lanka time guidance and disabled photo state", async () => {
+  await test("Customer request form retains Sri Lanka time guidance and enables photo uploads", async () => {
     await mountCustomer({ loggedIn: true });
-    assert(container.querySelector('input[name="photos"]')?.disabled, "Photo upload remains intentionally unavailable");
+    const photoInput = container.querySelector('input[name="photos"]');
+    assert(photoInput && !photoInput.disabled, "Photo upload should be enabled");
+    assert(photoInput.accept.includes("image/jpeg") && photoInput.accept.includes("image/png"), "Photo upload should restrict image types");
     assert(container.textContent.includes("Sri Lanka local time"), "Local-time guidance");
     assert(container.querySelector('button[type="submit"]')?.textContent.includes("Submit request"), "Request CTA");
   });

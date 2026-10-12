@@ -19,6 +19,7 @@
     "test:integration": "npm --workspace apps/platform run test:integration",
     "test:postgres": "npm --workspace apps/platform run test:postgres",
     "test:react": "npm --workspace apps/platform run test:react",
+    "test:cloudinary": "npm --workspace apps/platform run test:cloudinary",
     "typecheck": "npm --workspace apps/platform run typecheck",
     "lint": "npm --workspace apps/platform run lint",
     "test": "npm --workspace apps/platform test",

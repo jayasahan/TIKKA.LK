@@ -452,15 +452,6 @@ class PostgresStore {
         ]
       );
       const requestId = requestResult.rows[0].id;
-      for (const [index, photo] of (value.photos || []).entries()) {
-        await client.query(
-          `
-            INSERT INTO service_request_photos (id, service_request_id, file_name, display_order)
-            VALUES ($1, $2, $3, $4)
-          `,
-          [createId("photo"), requestId, photo, index]
-        );
-      }
       return requestId;
     });
     return this.findRequestById(result);
@@ -471,10 +462,10 @@ class PostgresStore {
       SELECT
         sr.*,
         sc.code AS service_category_code,
-        COALESCE(array_agg(srp.file_name ORDER BY srp.display_order) FILTER (WHERE srp.file_name IS NOT NULL), '{}') AS photos
+        COALESCE(json_agg(json_build_object('id', sra.id, 'publicId', sra.cloudinary_public_id, 'assetId', sra.cloudinary_asset_id, 'fileName', sra.file_name, 'mimeType', sra.mime_type, 'bytes', sra.bytes, 'width', sra.width, 'height', sra.height, 'format', sra.format) ORDER BY sra.created_at) FILTER (WHERE sra.id IS NOT NULL), '[]') AS photos
       FROM service_requests sr
       LEFT JOIN service_categories sc ON sc.id = sr.service_category_id
-      LEFT JOIN service_request_photos srp ON srp.service_request_id = sr.id
+      LEFT JOIN service_request_attachments sra ON sra.service_request_id = sr.id
       ${whereSql}
       GROUP BY sr.id, sc.code
     `;
@@ -512,6 +503,40 @@ class PostgresStore {
   async findCustomerRequestById(id, customerId) {
     const result = await this.query(this.requestSelectSql("WHERE sr.id = $1 AND sr.customer_id = $2"), [id, customerId]);
     return requestFromRow(result.rows[0]);
+  }
+
+  async createAttachment(value) {
+    const result = await this.query(`INSERT INTO service_request_attachments (id, customer_id, cloudinary_public_id, cloudinary_asset_id, file_name, mime_type, bytes, width, height, format) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`, [value.id, value.customerId, value.publicId, value.assetId || null, value.fileName, value.mimeType, value.bytes, value.width || null, value.height || null, value.format || null]);
+    return result.rows[0];
+  }
+
+  async completeAttachment(value, customerId) {
+    const result = await this.query(`UPDATE service_request_attachments SET cloudinary_public_id=$3, cloudinary_asset_id=$4, file_name=$5, mime_type=$6, bytes=$7, width=$8, height=$9, format=$10 WHERE id=$1 AND customer_id=$2 AND service_request_id IS NULL RETURNING *`, [value.uploadId, customerId, value.publicId, value.assetId || null, value.fileName, value.mimeType, value.bytes, value.width || null, value.height || null, value.format || null]);
+    if (!result.rows[0]) throw new Error("Upload session not found or already used.");
+    return result.rows[0];
+  }
+
+  async findAttachmentForCustomer(id, customerId) {
+    const result = await this.query("SELECT * FROM service_request_attachments WHERE id = $1 AND customer_id = $2", [id, customerId]);
+    return result.rows[0] || null;
+  }
+
+  async attachAttachments(ids, requestId, customerId) {
+    return transaction(this.pool, async (client) => {
+      const result = await client.query("SELECT * FROM service_request_attachments WHERE id = ANY($1::text[]) AND customer_id = $2 AND service_request_id IS NULL FOR UPDATE", [ids, customerId]);
+      if (result.rows.length !== ids.length) throw new Error("One or more uploaded images are invalid or already attached.");
+      await client.query("UPDATE service_request_attachments SET service_request_id = $1, attached_at = now() WHERE id = ANY($2::text[])", [requestId, ids]);
+      return result.rows;
+    });
+  }
+
+  async listOrphanAttachments(before) {
+    const result = await this.query("SELECT * FROM service_request_attachments WHERE service_request_id IS NULL AND created_at < $1", [before]);
+    return result.rows;
+  }
+
+  async removeAttachment(id) {
+    await this.query("DELETE FROM service_request_attachments WHERE id = $1", [id]);
   }
 
   async updateRequestStatus(requestId, status, adminId) {

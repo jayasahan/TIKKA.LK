@@ -275,6 +275,47 @@ class JsonStore {
     });
   }
 
+  async createAttachment(value) {
+    return this.store.update((database) => {
+      const attachment = { ...value, createdAt: new Date().toISOString(), attachedAt: null, serviceRequestId: null };
+      database.attachments.push(attachment);
+      return attachment;
+    });
+  }
+
+  async completeAttachment(value, customerId) {
+    return this.store.update((database) => {
+      const attachment = database.attachments.find((item) => item.id === value.uploadId && item.customerId === customerId && !item.serviceRequestId);
+      if (!attachment) throw new Error("Upload session not found or already used.");
+      Object.assign(attachment, { ...value, id: attachment.id, customerId, createdAt: attachment.createdAt, serviceRequestId: null, attachedAt: null });
+      return attachment;
+    });
+  }
+
+  async findAttachmentForCustomer(id, customerId) {
+    return this.store.read().attachments.find((item) => item.id === id && item.customerId === customerId) || null;
+  }
+
+  async attachAttachments(ids, requestId, customerId) {
+    return this.store.update((database) => {
+      const attachments = database.attachments.filter((item) => ids.includes(item.id) && item.customerId === customerId && !item.serviceRequestId);
+      if (attachments.length !== ids.length) throw new Error("One or more uploaded images are invalid or already attached.");
+      const attachedAt = new Date().toISOString();
+      attachments.forEach((item) => { item.serviceRequestId = requestId; item.attachedAt = attachedAt; });
+      const request = database.requests.find((item) => item.id === requestId);
+      if (request) request.photos = attachments;
+      return attachments;
+    });
+  }
+
+  async listOrphanAttachments(before) {
+    return this.store.read().attachments.filter((item) => !item.serviceRequestId && item.createdAt < before);
+  }
+
+  async removeAttachment(id) {
+    return this.store.update((database) => { database.attachments = database.attachments.filter((item) => item.id !== id); });
+  }
+
   async listRequests({ status, query } = {}) {
     return this.store.read().requests
       .filter((item) => (status ? item.status === status : true))

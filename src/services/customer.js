@@ -8,6 +8,9 @@ export const customerService = {
   services: () => api.get("/api/services"),
   requests: () => api.get("/api/requests"),
   createRequest: (body) => api.post("/api/requests", body),
+  uploadSignature: () => api.post("/api/uploads/signature", {}),
+  completeUpload: (body) => api.post("/api/uploads/complete", body),
+  releaseUploads: (uploadIds) => api.post("/api/uploads/release", { uploadIds }),
   confirm: (requestId) => api.post(`/api/requests/${requestId}/confirm`, {}),
   review: (requestId, body) => api.post(`/api/requests/${requestId}/review`, body)
 };

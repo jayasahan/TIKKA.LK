@@ -24,6 +24,7 @@ function createEmptyDatabase() {
   return {
     customers: [],
     requests: [],
+    attachments: [],
     reviews: [],
     providers: [],
     workers: [],
@@ -38,6 +39,9 @@ function normalizeDatabase(database) {
   }
   if (!Array.isArray(database.requests)) {
     database.requests = [];
+  }
+  if (!Array.isArray(database.attachments)) {
+    database.attachments = [];
   }
   if (!Array.isArray(database.reviews)) {
     database.reviews = [];
