@@ -25,7 +25,7 @@ const {
   OPERATOR_TRANSITIONS
 } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
-const { createUploadSignature, destroyAsset, MAX_UPLOADS, signedDeliveryUrl, validateUploadMetadata } = require("./lib/cloudinary");
+const { createUploadSignature, destroyAsset, MAX_UPLOADS, matchesUploadPublicId, signedDeliveryUrl, validateUploadMetadata } = require("./lib/cloudinary");
 const {
   hasErrors,
   validateCategory,
@@ -50,6 +50,17 @@ const loginLimitMaxFailures = Number(process.env.TIKKA_LOGIN_LIMIT_MAX_FAILURES 
 // TODO: Move rate-limit state to shared storage before running multiple app instances.
 const loginAttempts = new Map();
 let lastLoginAttemptCleanup = 0;
+
+function exposePhoto(photo) {
+  if (typeof photo === "string") return { fileName: photo };
+  if (!photo || !photo.publicId) return { ...photo, url: null };
+  try {
+    return { ...photo, url: signedDeliveryUrl(photo.publicId, photo.format) };
+  } catch (error) {
+    console.error(`Unable to sign photo delivery URL: ${error.message}`);
+    return { ...photo, url: null };
+  }
+}
 
 const securityHeaders = {
   "X-Content-Type-Options": "nosniff",
@@ -270,7 +281,7 @@ function exposeRequest(request, database) {
     preferredTime: request.preferredTime,
     address: request.address || null,
     assignedWorker: sanitizeWorker(worker),
-    photos: (request.photos || []).map((photo) => typeof photo === "string" ? { fileName: photo } : { ...photo, url: signedDeliveryUrl(photo.publicId, photo.format) }),
+    photos: (request.photos || []).map(exposePhoto),
     review: publicReview(review)
   };
 }
@@ -288,7 +299,7 @@ function exposeAdminRequest(request, database) {
     phone: request.phone,
     email: request.email,
     address: request.address,
-    photos: (request.photos || []).map((photo) => typeof photo === "string" ? { fileName: photo } : { ...photo, url: signedDeliveryUrl(photo.publicId, photo.format) }),
+    photos: (request.photos || []).map(exposePhoto),
     assignment: {
       worker: sanitizeWorker((database.workers || []).find((item) => item.id === request.assignedWorkerId)),
       assignedBy: sanitizeAdmin(admin),
@@ -995,7 +1006,11 @@ async function handleApi(request, response, store, url) {
       const { errors } = validateUploadMetadata(body);
       if (Object.keys(errors).length) { sendJson(response, 400, { errors }); return; }
       const pending = await store.findAttachmentForCustomer(body.uploadId, auth.customer.id);
-      if (!pending || pending.publicId !== body.publicId) { sendJson(response, 400, { error: "Upload session does not match this asset." }); return; }
+      if (!pending || !matchesUploadPublicId(pending.publicId, body.publicId)) {
+        console.error(`Upload public ID mismatch for ${body.uploadId || "unknown upload"}.`);
+        sendJson(response, 400, { error: "Upload session does not match this asset." });
+        return;
+      }
       const attachment = await store.completeAttachment(body, auth.customer.id);
       sendJson(response, 200, { attachment });
       return;

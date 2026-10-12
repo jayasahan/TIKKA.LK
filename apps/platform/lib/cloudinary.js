@@ -63,4 +63,14 @@ function validateUploadMetadata(value) {
   return { errors };
 }
 
-module.exports = { ALLOWED_MIME_TYPES, INCOMING_TRANSFORMATION, MAX_BYTES, MAX_UPLOADS, createUploadSignature, destroyAsset, getConfig, signedDeliveryUrl, validateUploadMetadata };
+function matchesUploadPublicId(expected, actual) {
+  const expectedId = String(expected || "").replace(/^\/+/, "");
+  const actualId = String(actual || "").replace(/^\/+/, "");
+  if (!expectedId || !actualId) return false;
+  const parts = expectedId.split("/");
+  const uploadId = parts.at(-1);
+  const customerId = parts.at(-2);
+  return actualId === expectedId || actualId === `${customerId}/${uploadId}` || actualId === uploadId;
+}
+
+module.exports = { ALLOWED_MIME_TYPES, INCOMING_TRANSFORMATION, MAX_BYTES, MAX_UPLOADS, createUploadSignature, destroyAsset, getConfig, matchesUploadPublicId, signedDeliveryUrl, validateUploadMetadata };
