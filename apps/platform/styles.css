@@ -2021,9 +2021,12 @@ legend em {
   .nav-menu__mobile-hotline { display: inline-flex; }
   .nav-menu__mobile-cta { color: var(--color-black); }
   .nav-menu__mobile-hotline { border-top: 1px solid var(--color-line); }
+  body.nav-open { overflow: hidden; }
+}
+
+@media (max-width: 1039px) {
   .customer-nav__request,
   .customer-nav__logout { display: inline-flex; }
-  body.nav-open { overflow: hidden; }
 }
 .customer-panel,
 .customer-detail-panel,
