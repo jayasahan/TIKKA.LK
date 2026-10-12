@@ -74,7 +74,8 @@ window.fetch = async (url, init = {}) => {
       "/api/admin/workers": { workers: fixture.workers },
       "/api/admin/customers": { customers: fixture.customers },
       "/api/admin/reviews": { reviews: fixture.reviews },
-      "/api/admin/categories": { categories: [] }
+      "/api/admin/categories": { categories: [] },
+      "/api/admin/forms": { forms: fixture.forms }
     }[url];
     assert(payload, `Unexpected GET ${url}`);
     return json(payload);
@@ -113,6 +114,7 @@ async function mount(area, config = {}, changes = {}) {
     customers: [{ id: "customer-1", name: "Test Customer" }],
     jobs: [{ id: "request-1", reference: "TIK-001", service: "Plumbing", customerId: "customer-1", status: "CONFIRMED" }],
     reviews: [{ id: "review-1", requestId: "request-1", reference: "TIK-001", customerId: "customer-1", rating: 5, comment: "Helpful service", hidden: false, ...changes.review }],
+    forms: [],
     customer: { id: "customer-1", name: "Test Customer", email: "customer@example.com", phone: "+94770000000" }
   };
   history.replaceState(null, "", `/#${area}`);

@@ -1,4 +1,5 @@
-const { createId, createRequestReference, createStore } = require("./db");
+const crypto = require("node:crypto");
+const { createFormNumber, createId, createRequestReference, createStore } = require("./db");
 
 function duplicateError(field, message) {
   const error = new Error(message);
@@ -85,6 +86,85 @@ class JsonStore {
 
   async findCategoryByName(name) {
     return this.store.read().categories.find((item) => item.name === name) || null;
+  }
+
+  async createShareableForm({ title = "TIKKA job request", adminId }) {
+    return this.store.update((database) => {
+      if (!Array.isArray(database.forms)) database.forms = [];
+      if (!Array.isArray(database.formSubmissions)) database.formSubmissions = [];
+      const now = new Date().toISOString();
+      const form = {
+        id: createId("form"), formNumber: createFormNumber(database),
+        publicToken: crypto.randomBytes(18).toString("base64url"), title: String(title).trim() || "TIKKA job request",
+        enabled: true, createdByAdminId: adminId || null, createdAt: now, updatedAt: now
+      };
+      database.forms.push(form);
+      return form;
+    });
+  }
+
+  async listShareableForms({ query = "", status = "" } = {}) {
+    const database = this.store.read();
+    const forms = database.forms || [];
+    const submissions = database.formSubmissions || [];
+    const normalized = String(query).trim().toLowerCase();
+    return forms.map((form) => ({
+      ...form,
+      submissions: submissions.filter((item) => item.formId === form.id && (!status || item.status === status) && (!normalized || [item.id, item.customerName, item.phone, item.service, item.status].join(" ").toLowerCase().includes(normalized)))
+    }));
+  }
+
+  async findShareableFormByToken(publicToken) {
+    return (this.store.read().forms || []).find((form) => form.publicToken === publicToken) || null;
+  }
+
+  async findShareableFormById(id) {
+    return (this.store.read().forms || []).find((form) => form.id === id) || null;
+  }
+
+  async toggleShareableForm(id) {
+    return this.store.update((database) => {
+      const form = (database.forms || []).find((item) => item.id === id);
+      if (!form) throw notFoundError("Form not found.");
+      form.enabled = !form.enabled; form.updatedAt = new Date().toISOString(); return form;
+    });
+  }
+
+  async createFormSubmission(form, value) {
+    return this.store.update((database) => {
+      if (!Array.isArray(database.formSubmissions)) database.formSubmissions = [];
+      const category = (database.categories || []).find((item) => item.name === value.service);
+      const now = new Date().toISOString();
+      const submission = {
+        id: createId("form_submission"), formId: form.id, editToken: crypto.randomBytes(18).toString("base64url"),
+        customerName: value.customerName, phone: value.phone, service: category?.name || value.service,
+        serviceCategoryId: category?.id || null, description: value.description, location: value.location,
+        preferredDate: value.preferredDate || null, status: "NEW", convertedRequestId: null, createdAt: now, updatedAt: now
+      };
+      database.formSubmissions.push(submission); return submission;
+    });
+  }
+
+  async findFormSubmissionByEditToken(formId, editToken) {
+    return (this.store.read().formSubmissions || []).find((item) => item.formId === formId && item.editToken === editToken) || null;
+  }
+
+  async updateFormSubmission(form, editToken, value) {
+    return this.store.update((database) => {
+      const submission = (database.formSubmissions || []).find((item) => item.formId === form.id && item.editToken === editToken);
+      if (!submission) throw notFoundError("Submission not found.");
+      const category = (database.categories || []).find((item) => item.name === value.service);
+      Object.assign(submission, { customerName: value.customerName, phone: value.phone, service: category?.name || value.service, serviceCategoryId: category?.id || null, description: value.description, location: value.location, preferredDate: value.preferredDate || null, updatedAt: new Date().toISOString() });
+      return submission;
+    });
+  }
+
+  async updateFormSubmissionStatus(id, status) {
+    return this.store.update((database) => {
+      const submission = (database.formSubmissions || []).find((item) => item.id === id);
+      if (!submission) throw notFoundError("Submission not found.");
+      submission.status = status; submission.updatedAt = new Date().toISOString(); return submission;
+    });
   }
 
   async createCategory(value) {

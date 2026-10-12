@@ -35,6 +35,7 @@ const {
   validateRequest,
   validateReview,
   validateSchedule,
+  validateShareableFormSubmission,
   validateStatus
 } = require("./lib/validation");
 
@@ -362,6 +363,25 @@ function exposeCategory(category) {
   };
 }
 
+function exposeFormSubmission(submission, { includeEditToken = false } = {}) {
+  if (!submission) return null;
+  return {
+    id: submission.id, formId: submission.formId, customerName: submission.customerName,
+    phone: submission.phone, service: submission.service, description: submission.description,
+    location: submission.location, preferredDate: submission.preferredDate || null,
+    status: submission.status, createdAt: submission.createdAt, updatedAt: submission.updatedAt,
+    ...(includeEditToken ? { editToken: submission.editToken } : {})
+  };
+}
+
+function exposeShareableForm(form, { includeSubmissions = true } = {}) {
+  return {
+    id: form.id, formNumber: form.formNumber, title: form.title, enabled: form.enabled,
+    publicToken: form.publicToken, createdAt: form.createdAt, updatedAt: form.updatedAt,
+    ...(includeSubmissions ? { submissions: (form.submissions || []).map((item) => exposeFormSubmission(item)) } : {})
+  };
+}
+
 function getAdminCredentials() {
   const email = (process.env.TIKKA_ADMIN_EMAIL || "").trim().toLowerCase();
   const password = process.env.TIKKA_ADMIN_PASSWORD || "";
@@ -624,6 +644,75 @@ async function handleApi(request, response, store, url) {
         return;
       }
       sendJson(response, 200, { metrics: await store.dashboardMetrics() });
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/admin/forms") {
+      const auth = await requireAdmin(request, response, store);
+      if (!auth) return;
+      const body = await readJsonBody(request);
+      const title = String(body.title || "TIKKA job request").trim().slice(0, 160);
+      const form = await store.createShareableForm({ title, adminId: auth.admin.id });
+      sendJson(response, 201, { form: exposeShareableForm(form, { includeSubmissions: false }) });
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/admin/forms") {
+      if (!await requireAdmin(request, response, store)) return;
+      const forms = await store.listShareableForms({ query: url.searchParams.get("q") || "", status: url.searchParams.get("status") || "" });
+      sendJson(response, 200, { forms: forms.map((form) => exposeShareableForm(form)) });
+      return;
+    }
+
+    const adminFormToggleMatch = url.pathname.match(/^\/api\/admin\/forms\/([^/]+)\/toggle$/);
+    if (request.method === "POST" && adminFormToggleMatch) {
+      if (!await requireAdmin(request, response, store)) return;
+      try {
+        const form = await store.toggleShareableForm(adminFormToggleMatch[1]);
+        sendJson(response, 200, { form: exposeShareableForm(form, { includeSubmissions: false }) });
+      } catch (error) {
+        if (error.code === "NOT_FOUND") { sendJson(response, 404, { error: "Form not found." }); return; }
+        throw error;
+      }
+      return;
+    }
+
+    const adminSubmissionStatusMatch = url.pathname.match(/^\/api\/admin\/form-submissions\/([^/]+)\/status$/);
+    if (request.method === "POST" && adminSubmissionStatusMatch) {
+      if (!await requireAdmin(request, response, store)) return;
+      const body = await readJsonBody(request);
+      if (!["NEW", "REVIEWED", "CONVERTED", "ARCHIVED"].includes(body.status)) {
+        sendJson(response, 400, { error: "Choose a valid form submission status." }); return;
+      }
+      try {
+        const submission = await store.updateFormSubmissionStatus(adminSubmissionStatusMatch[1], body.status);
+        sendJson(response, 200, { submission: exposeFormSubmission(submission) });
+      } catch (error) {
+        if (error.code === "NOT_FOUND") { sendJson(response, 404, { error: "Submission not found." }); return; }
+        throw error;
+      }
+      return;
+    }
+
+    const publicFormMatch = url.pathname.match(/^\/api\/forms\/([A-Za-z0-9_-]+)$/);
+    if (request.method === "GET" && publicFormMatch) {
+      const form = await store.findShareableFormByToken(publicFormMatch[1]);
+      if (!form || !form.enabled) { sendJson(response, 404, { error: "This form is no longer available." }); return; }
+      sendJson(response, 200, { form: exposeShareableForm(form, { includeSubmissions: false }), services: (await store.listCategories({ enabledOnly: true })).map(exposeCategory) });
+      return;
+    }
+
+    if (request.method === "POST" && publicFormMatch) {
+      const form = await store.findShareableFormByToken(publicFormMatch[1]);
+      if (!form || !form.enabled) { sendJson(response, 404, { error: "This form is no longer available." }); return; }
+      const body = await readJsonBody(request);
+      const categories = await store.listCategories({ enabledOnly: true });
+      const { errors, value } = validateShareableFormSubmission(body, categories);
+      if (hasErrors(errors)) { sendJson(response, 400, { errors }); return; }
+      const submission = body.editToken
+        ? await store.updateFormSubmission(form, String(body.editToken), value)
+        : await store.createFormSubmission(form, value);
+      sendJson(response, body.editToken ? 200 : 201, { message: body.editToken ? "Your form was updated." : "Your request was submitted.", submission: exposeFormSubmission(submission, { includeEditToken: true }) });
       return;
     }
 
@@ -1110,7 +1199,8 @@ async function hasValidAdminSession(request, store) {
 }
 
 async function serveStatic(request, response, url, store) {
-  let requestPath = frontendEntries.has(url.pathname) ? "/index.html" : url.pathname;
+  const isPublicForm = /^\/forms\/[A-Za-z0-9_-]+$/.test(url.pathname);
+  let requestPath = frontendEntries.has(url.pathname) || isPublicForm ? "/index.html" : url.pathname;
   if (requestPath.startsWith("/public/brand/") || requestPath.startsWith("/public/hero/")) {
     requestPath = `/${requestPath.slice("/public/".length)}`;
   }

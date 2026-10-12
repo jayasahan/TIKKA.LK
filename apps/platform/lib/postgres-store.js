@@ -36,6 +36,27 @@ function customerFromRow(row) {
   };
 }
 
+function formFromRow(row, submissions = []) {
+  if (!row) return null;
+  return {
+    id: row.id, formNumber: row.form_number, publicToken: row.public_token,
+    title: row.title, enabled: row.enabled, createdByAdminId: row.created_by_admin_id || null,
+    createdAt: asIso(row.created_at), updatedAt: asIso(row.updated_at), submissions
+  };
+}
+
+function formSubmissionFromRow(row) {
+  if (!row) return null;
+  return {
+    id: row.id, formId: row.form_id, editToken: row.edit_token, customerName: row.customer_name,
+    phone: row.phone, service: row.service_name_snapshot, serviceCategoryId: row.service_category_id || null,
+    description: row.description, location: row.location,
+    preferredDate: row.preferred_date ? asIso(row.preferred_date).slice(0, 10) : null,
+    status: row.status, convertedRequestId: row.converted_request_id || null,
+    createdAt: asIso(row.created_at), updatedAt: asIso(row.updated_at)
+  };
+}
+
 function workerFromRow(row) {
   if (!row) return null;
   return {
@@ -223,6 +244,85 @@ class PostgresStore {
       [enabledOnly]
     );
     return result.rows.map(categoryFromRow);
+  }
+
+  async createShareableForm({ title = "TIKKA job request", adminId }) {
+    const result = await this.query(
+      `INSERT INTO shareable_forms (id, form_number, public_token, title, created_by_admin_id)
+       VALUES ($1, 'TF-' || nextval('tikka_shareable_form_number_seq'), $2, $3, $4) RETURNING *`,
+      [createId("form"), require("node:crypto").randomBytes(18).toString("base64url"), String(title).trim() || "TIKKA job request", adminId || null]
+    );
+    return formFromRow(result.rows[0]);
+  }
+
+  async listShareableForms({ query = "", status = "" } = {}) {
+    const params = [];
+    const clauses = [];
+    if (query) { params.push(`%${String(query).trim().toLowerCase()}%`); clauses.push(`LOWER(CONCAT_WS(' ', sfs.form_number, sfs.title, fs.customer_name, fs.phone, fs.service_name_snapshot, fs.status)) LIKE $${params.length}`); }
+    if (status) { params.push(status); clauses.push(`fs.status = $${params.length}`); }
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const result = await this.query(`
+      SELECT sfs.*, fs.id AS submission_id, fs.edit_token, fs.customer_name, fs.phone,
+             fs.service_name_snapshot, fs.description, fs.location, fs.preferred_date,
+             fs.status, fs.converted_request_id, fs.created_at AS submission_created_at,
+             fs.updated_at AS submission_updated_at
+      FROM shareable_forms sfs LEFT JOIN shareable_form_submissions fs ON fs.form_id = sfs.id
+      ${where} ORDER BY sfs.created_at DESC, fs.created_at DESC`, params);
+    const grouped = new Map();
+    for (const row of result.rows) {
+      if (!grouped.has(row.id)) grouped.set(row.id, formFromRow(row, []));
+      if (row.submission_id) grouped.get(row.id).submissions.push(formSubmissionFromRow({
+        id: row.submission_id, form_id: row.id, edit_token: row.edit_token, customer_name: row.customer_name,
+        phone: row.phone, service_name_snapshot: row.service_name_snapshot, description: row.description,
+        location: row.location, preferred_date: row.preferred_date, status: row.status,
+        converted_request_id: row.converted_request_id, created_at: row.submission_created_at, updated_at: row.submission_updated_at
+      }));
+    }
+    return [...grouped.values()];
+  }
+
+  async findShareableFormByToken(publicToken) {
+    const result = await this.query("SELECT * FROM shareable_forms WHERE public_token = $1", [publicToken]);
+    return formFromRow(result.rows[0]);
+  }
+
+  async findShareableFormById(id) {
+    const result = await this.query("SELECT * FROM shareable_forms WHERE id = $1", [id]);
+    return formFromRow(result.rows[0]);
+  }
+
+  async toggleShareableForm(id) {
+    const result = await this.query("UPDATE shareable_forms SET enabled = NOT enabled, updated_at = now() WHERE id = $1 RETURNING *", [id]);
+    if (!result.rows[0]) throw notFoundError("Form not found.");
+    return formFromRow(result.rows[0]);
+  }
+
+  async createFormSubmission(form, value) {
+    const category = await this.findCategoryByName(value.service);
+    const result = await this.query(
+      `INSERT INTO shareable_form_submissions (id, form_id, edit_token, customer_name, phone, service_category_id, service_name_snapshot, description, location, preferred_date)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [createId("form_submission"), form.id, require("node:crypto").randomBytes(18).toString("base64url"), value.customerName, value.phone, category?.id || null, category?.name || value.service, value.description, value.location, value.preferredDate || null]
+    );
+    return formSubmissionFromRow(result.rows[0]);
+  }
+
+  async findFormSubmissionByEditToken(formId, editToken) {
+    const result = await this.query("SELECT * FROM shareable_form_submissions WHERE form_id = $1 AND edit_token = $2", [formId, editToken]);
+    return formSubmissionFromRow(result.rows[0]);
+  }
+
+  async updateFormSubmission(form, editToken, value) {
+    const category = await this.findCategoryByName(value.service);
+    const result = await this.query(`UPDATE shareable_form_submissions SET customer_name=$3, phone=$4, service_category_id=$5, service_name_snapshot=$6, description=$7, location=$8, preferred_date=$9, updated_at=now() WHERE form_id=$1 AND edit_token=$2 RETURNING *`, [form.id, editToken, value.customerName, value.phone, category?.id || null, category?.name || value.service, value.description, value.location, value.preferredDate || null]);
+    if (!result.rows[0]) throw notFoundError("Submission not found.");
+    return formSubmissionFromRow(result.rows[0]);
+  }
+
+  async updateFormSubmissionStatus(id, status) {
+    const result = await this.query("UPDATE shareable_form_submissions SET status=$2, updated_at=now() WHERE id=$1 RETURNING *", [id, status]);
+    if (!result.rows[0]) throw notFoundError("Submission not found.");
+    return formSubmissionFromRow(result.rows[0]);
   }
 
   async findCategoryById(id) {

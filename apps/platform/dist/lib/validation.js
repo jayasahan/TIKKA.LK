@@ -146,6 +146,20 @@ function validateRequest(body, categories = serviceData) {
   };
 }
 
+function validateShareableFormSubmission(body, categories = serviceData) {
+  const errors = {};
+  const customerName = requireField(errors, body, "customerName", "Full name", 120);
+  const phone = requireField(errors, body, "phone", "Phone", 30);
+  const service = requireField(errors, body, "service", "Service category", 80);
+  const description = requireField(errors, body, "description", "Job description", 1200);
+  const location = requireField(errors, body, "location", "Job location or area", 400);
+  const preferredDate = cleanString(body.preferredDate);
+  if (phone && !isPhone(phone)) errors.phone = "Enter a valid phone number.";
+  if (service && !activeServiceNames(categories).includes(service)) errors.service = "Choose one of the available services.";
+  if (preferredDate && (Number.isNaN(Date.parse(preferredDate)) || !/^\d{4}-\d{2}-\d{2}$/.test(preferredDate))) errors.preferredDate = "Enter a valid preferred date.";
+  return { errors, value: { customerName, phone, service, description, location, preferredDate: preferredDate || null } };
+}
+
 function validateStatus(body) {
   const errors = {};
   const status = requireField(errors, body, "status", "Status", 40);
@@ -259,6 +273,7 @@ module.exports = {
   validateModeration,
   validateRegistration,
   validateRequest,
+  validateShareableFormSubmission,
   validateReview,
   validateSchedule,
   validateStatus

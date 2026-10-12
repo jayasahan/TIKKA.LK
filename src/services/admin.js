@@ -17,5 +17,9 @@ export const adminService = {
   toggleWorker: (id) => api.post(`/api/admin/workers/${id}/toggle-active`),
   availability: (id, availabilityStatus) => api.post(`/api/admin/workers/${id}/availability`, { availabilityStatus }),
   moderate: (id, action) => api.post(`/api/admin/reviews/${id}/moderate`, { action }),
-  category: (id, body) => api.post(id ? `/api/admin/categories/${id}` : "/api/admin/categories", body)
+  category: (id, body) => api.post(id ? `/api/admin/categories/${id}` : "/api/admin/categories", body),
+  forms: (query = "") => api.get(`/api/admin/forms${query}`),
+  createForm: (body) => api.post("/api/admin/forms", body),
+  toggleForm: (id) => api.post(`/api/admin/forms/${id}/toggle`, {}),
+  formSubmissionStatus: (id, status) => api.post(`/api/admin/form-submissions/${id}/status`, { status })
 };

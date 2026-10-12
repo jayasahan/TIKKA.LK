@@ -29,6 +29,8 @@ function createEmptyDatabase() {
     providers: [],
     workers: [],
     admins: [],
+    forms: [],
+    formSubmissions: [],
     categories: seedCategories()
   };
 }
@@ -54,6 +56,12 @@ function normalizeDatabase(database) {
   }
   if (!Array.isArray(database.admins)) {
     database.admins = [];
+  }
+  if (!Array.isArray(database.forms)) {
+    database.forms = [];
+  }
+  if (!Array.isArray(database.formSubmissions)) {
+    database.formSubmissions = [];
   }
   if (!Array.isArray(database.categories) || database.categories.length === 0) {
     database.categories = seedCategories();
@@ -114,9 +122,18 @@ function createRequestReference() {
   return `TIKKA-${date}-${crypto.randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
+function createFormNumber(database) {
+  const highest = (database.forms || []).reduce((max, form) => {
+    const match = String(form.formNumber || "").match(/^TF-(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 1000);
+  return `TF-${highest + 1}`;
+}
+
 module.exports = {
   createEmptyDatabase,
   createId,
+  createFormNumber,
   createRequestReference,
   createStore,
   seedCategories
