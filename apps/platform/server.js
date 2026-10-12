@@ -25,7 +25,7 @@ const {
   OPERATOR_TRANSITIONS
 } = require("./lib/constants");
 const { createStorage } = require("./lib/storage");
-const { createUploadSignature, destroyAsset, MAX_UPLOADS, matchesUploadPublicId, signedDeliveryUrl, validateUploadMetadata } = require("./lib/cloudinary");
+const { bindUploadMetadata, createUploadSignature, destroyAsset, MAX_UPLOADS, signedDeliveryUrl, validateUploadMetadata } = require("./lib/cloudinary");
 const {
   hasErrors,
   validateCategory,
@@ -1006,12 +1006,14 @@ async function handleApi(request, response, store, url) {
       const { errors } = validateUploadMetadata(body);
       if (Object.keys(errors).length) { sendJson(response, 400, { errors }); return; }
       const pending = await store.findAttachmentForCustomer(body.uploadId, auth.customer.id);
-      if (!pending || !matchesUploadPublicId(pending.publicId, body.publicId)) {
-        console.error(`Upload public ID mismatch for ${body.uploadId || "unknown upload"}.`);
-        sendJson(response, 400, { error: "Upload session does not match this asset." });
+      if (!pending) {
+        sendJson(response, 400, { error: "Upload session was not found for this customer. Please select the photo again." });
         return;
       }
-      const attachment = await store.completeAttachment(body, auth.customer.id);
+      // public_id is part of the server-signed upload parameters. Keep that
+      // server-owned value canonical instead of trusting Cloudinary's response
+      // formatting or a browser-submitted public_id.
+      const attachment = await store.completeAttachment(bindUploadMetadata(pending, body), auth.customer.id);
       sendJson(response, 200, { attachment });
       return;
     }

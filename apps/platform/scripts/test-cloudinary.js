@@ -2,7 +2,7 @@ require("dotenv").config({ path: require("node:path").resolve(__dirname, "..", "
 
 const assert = require("node:assert/strict");
 const test = require("node:test");
-const { createUploadSignature, getConfig, matchesUploadPublicId } = require("../lib/cloudinary");
+const { bindUploadMetadata, createUploadSignature, getConfig } = require("../lib/cloudinary");
 
 test("TIKKA Cloudinary configuration is present and signs isolated uploads", () => {
   const config = getConfig();
@@ -14,8 +14,7 @@ test("TIKKA Cloudinary configuration is present and signs isolated uploads", () 
   assert.equal(signature.uploadParams.type, "authenticated");
   assert.equal(signature.uploadParams.transformation, "c_limit,w_1600,h_1200,q_auto");
   assert.ok(signature.publicId.startsWith(`${config.folder}/customer_test/upload_`));
-  assert.equal(matchesUploadPublicId(signature.publicId, signature.publicId), true);
-  assert.equal(matchesUploadPublicId(signature.publicId, "customer_test/upload_0123456789abcdef"), true);
-  assert.equal(matchesUploadPublicId(signature.publicId, "other_customer/upload_0123456789abcdef"), false);
+  const completed = bindUploadMetadata({ publicId: signature.publicId }, { publicId: "browser-controlled-value", bytes: 1024 });
+  assert.equal(completed.publicId, signature.publicId);
   assert.equal(signature.maxBytes, 8 * 1024 * 1024);
 });

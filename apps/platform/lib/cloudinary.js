@@ -56,7 +56,7 @@ function validateUploadMetadata(value) {
   const errors = {};
   if (!value || typeof value !== "object") return { errors: { photo: "Invalid photo metadata." } };
   if (typeof value.uploadId !== "string" || !/^upload_[a-f0-9]+$/.test(value.uploadId)) errors.uploadId = "Invalid upload reference.";
-  if (typeof value.publicId !== "string" || value.publicId.length > 255) errors.publicId = "Invalid Cloudinary asset reference.";
+  if (value.publicId !== undefined && (typeof value.publicId !== "string" || value.publicId.length > 255)) errors.publicId = "Invalid Cloudinary asset reference.";
   if (!ALLOWED_MIME_TYPES.has(value.mimeType)) errors.mimeType = "Only JPG, PNG, and WebP images are allowed.";
   if (!Number.isInteger(value.bytes) || value.bytes < 1 || value.bytes > MAX_BYTES) errors.bytes = "Each image must be 8 MB or smaller.";
   if (typeof value.fileName !== "string" || value.fileName.trim().length > 180) errors.fileName = "Invalid image filename.";
@@ -73,4 +73,8 @@ function matchesUploadPublicId(expected, actual) {
   return actualId === expectedId || actualId === `${customerId}/${uploadId}` || actualId === uploadId;
 }
 
-module.exports = { ALLOWED_MIME_TYPES, INCOMING_TRANSFORMATION, MAX_BYTES, MAX_UPLOADS, createUploadSignature, destroyAsset, getConfig, matchesUploadPublicId, signedDeliveryUrl, validateUploadMetadata };
+function bindUploadMetadata(pending, uploaded) {
+  return { ...uploaded, publicId: pending.publicId };
+}
+
+module.exports = { ALLOWED_MIME_TYPES, INCOMING_TRANSFORMATION, MAX_BYTES, MAX_UPLOADS, bindUploadMetadata, createUploadSignature, destroyAsset, getConfig, matchesUploadPublicId, signedDeliveryUrl, validateUploadMetadata };
